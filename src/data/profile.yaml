@@ -10,12 +10,12 @@ headline: Engineering leader, technologist, and software builder.
 description: >-
   CIO and Head of Engineering at Speakeasy. Engineering leadership, SaaS, cloud
   infrastructure, networking, and security. Also owner of Ryse Software, Active
-  DataComm, and Vitality South.
+  DataComm, Vitality South, and Wire Safe Solutions.
 
 intro: >-
   I'm CIO and Head of Engineering at Speakeasy, where I lead engineering and
   run day-to-day DevOps for the platform behind venues, festivals, and live
-  events. I also own three technology companies in Tupelo, Mississippi, and I
+  events. I also own four technology companies in Tupelo, Mississippi, and I
   work hands-on from business requirements down to code, databases, cloud
   infrastructure, networking, security, and production operations.
 
@@ -67,6 +67,21 @@ roles:
       - Founded the company and lead architecture, security, and delivery across every client platform
       - Built the ITP Virtual Career Expo (web, iOS, and Android) for 17 Northeast Mississippi counties, then redeployed it statewide in North Carolina
       - Built an LMS and business-planning platform for a CDFI, SMS/MMS shift broadcasting for a staffing firm, and a unified CRM and client portal
+
+  - organization: Wire Safe Solutions
+    url: https://wiresafesolutions.com/
+    title: Owner & VP of Technology
+    start: 2025
+    location: Tupelo, MS
+    summary: >-
+      Wire Safe Solutions builds the physical side of a business network:
+      structured cabling (Cat5e, Cat6, and fiber), security cameras, access
+      control, server rooms, and commercial A/V across North Mississippi. I
+      own the company and lead its technology, from design through
+      installation and support.
+    highlights:
+      - Set technical direction and standards for cabling, camera, and access control installations
+      - Design network infrastructure for churches, property managers, manufacturers, healthcare providers, and commercial construction
 
   - organization: Active DataComm
     url: https://callactive.com/
@@ -189,9 +204,10 @@ about:
     tickets and tables, manage guests at the door, and stay connected with
     their customers.
   - >-
-    I also own Ryse Software, Vitality South, and Active DataComm in Tupelo,
-    Mississippi, which provide custom software development, marketing, and IT
-    managed services.
+    I also own Ryse Software, Vitality South, Active DataComm, and Wire Safe
+    Solutions in Tupelo, Mississippi, which provide custom software
+    development, marketing, IT managed services, and structured cabling and
+    security systems.
     Our teams build custom software and technology solutions for businesses
     that need more than off-the-shelf tools. We treat IT as something that
     should move a business forward, not just keep the lights on, and we learn

@@ -247,7 +247,8 @@ const host = (role: Role) => new URL(role.url).hostname.replace(/^www\./, '');
 
   .roles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+    /* At most two columns (40% each); one column once they'd be narrower than 19rem. */
+    grid-template-columns: repeat(auto-fit, minmax(max(19rem, 40%), 1fr));
     gap: 1rem;
   }
 
