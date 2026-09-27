@@ -23,7 +23,7 @@ npm --prefix "$ROOT" run build
 # Every file needs a content type below; refuse to publish anything unexpected.
 unknown="$(cd "$DIST" && find . -type f ! \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.woff2' \
   -o -name '*.jpg' -o -name '*.webp' -o -name '*.png' -o -name '*.svg' -o -name '*.xml' -o -name 'robots.txt' \
-  -o -name '*.zip' \))"
+  -o -name '*.zip' -o -name 'pgp.asc' -o -name 'ssh.pub' \))"
 if [[ -n "$unknown" ]]; then
   echo "No content type configured for:" >&2
   echo "$unknown" >&2
@@ -53,6 +53,9 @@ put 'rss.xml' 'application/rss+xml; charset=utf-8' "$PAGE"
 put 'sitemap*.xml' 'application/xml; charset=utf-8' "$PAGE"
 put 'robots.txt' 'text/plain; charset=utf-8' "$PAGE"
 put 'downloads/*.zip' 'application/zip' "$PAGE"
+# Plain text, so the public keys open in a browser and pipe cleanly from curl.
+put 'pgp.asc' 'text/plain; charset=utf-8' "$PAGE"
+put 'ssh.pub' 'text/plain; charset=utf-8' "$PAGE"
 
 # Remove files that are no longer in the build. The bucket is versioned, so
 # anything removed or overwritten stays recoverable for 30 days.

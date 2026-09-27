@@ -24,6 +24,7 @@ Node 22.12 or newer.
 | Name, headline, roles, What I do, How I work, stack, certification, About text, contact line | `src/data/profile.yaml` |
 | Selected initiatives | `src/content/projects/*.md` |
 | Writing | `src/content/writing/*.md` |
+| Public PGP and SSH keys (served at `/pgp.asc` and `/ssh.pub`, linked in the footer) | `public/pgp.asc`, `public/ssh.pub` |
 
 `profile.yaml` feeds the home page, About, Work, Contact, the résumé at `/resume/`, and the JSON-LD structured data. It is validated at build time, so a typo fails the build instead of shipping. To publish an email address, uncomment `email:` in it.
 
