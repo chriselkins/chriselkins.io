@@ -178,10 +178,11 @@ Resources:
           ReferrerPolicy:
             ReferrerPolicy: strict-origin-when-cross-origin
             Override: true
+          # Two years, every subdomain, and eligible for the browsers' preload list (hstspreload.org).
           StrictTransportSecurity:
-            AccessControlMaxAgeSec: 31536000
-            IncludeSubdomains: false
-            Preload: false
+            AccessControlMaxAgeSec: 63072000
+            IncludeSubdomains: true
+            Preload: true
             Override: true
         CustomHeadersConfig:
           Items:

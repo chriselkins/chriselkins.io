@@ -64,7 +64,7 @@ The site is served from a private S3 bucket through CloudFront at `https://chris
 
 - ACM certificate for `chriselkins.io`, validated in Route 53
 - S3 bucket `chriselkins-io-site`: public access blocked, encrypted, versioned (old versions expire after 30 days), TLS-only
-- CloudFront, pay-as-you-go: Origin Access Control to the bucket, HTTPS only (TLS 1.2+), HTTP/2 and HTTP/3, IPv6, compression, the 404 page, a CloudFront Function that serves `/about/` from `about/index.html` and redirects `/about` to `/about/`, and a response headers policy with the Content-Security-Policy, HSTS, and other security headers
+- CloudFront, pay-as-you-go: Origin Access Control to the bucket, HTTPS only (TLS 1.2+), HTTP/2 and HTTP/3, IPv6, compression, the 404 page, a CloudFront Function that serves `/about/` from `about/index.html` and redirects `/about` to `/about/`, and a response headers policy with the Content-Security-Policy, HSTS (two years, `includeSubDomains`, `preload`, so every subdomain must serve HTTPS), and other security headers
 - Route 53 A and AAAA alias records for the apex
 
 `npm run deploy` builds the site, uploads it with explicit content types and cache headers (hashed assets cached for a year, pages revalidated), removes files that are no longer in the build, and invalidates CloudFront. `npm run deploy:infra` applies changes to the stack after editing `infra/site.yaml`. Both use the default AWS CLI profile.
