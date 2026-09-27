@@ -1,0 +1,50 @@
+---
+import { profile } from '../lib/profile';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <p>© {year} {profile.name} · {profile.location.city}, {profile.location.region}</p>
+    <ul role="list" class="site-footer__links">
+      <li><a href={profile.links.linkedin} rel="me noopener">LinkedIn</a></li>
+      <li><a href={profile.links.github} rel="me noopener">GitHub</a></li>
+      {profile.links.credly && <li><a href={profile.links.credly} rel="me noopener">Credly</a></li>}
+      <li><a href="/resume/">Résumé</a></li>
+      <li><a href="/rss.xml">RSS</a></li>
+    </ul>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: 2rem;
+  }
+
+  .site-footer__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    padding-block: 2rem 2.5rem;
+    border-top: 1px solid var(--line);
+    color: var(--text-3);
+    font-size: 0.875rem;
+  }
+
+  .site-footer__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .site-footer__links a {
+    transition: color 0.15s ease;
+  }
+
+  .site-footer__links a:hover {
+    color: var(--text);
+  }
+</style>

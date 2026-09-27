@@ -1,0 +1,917 @@
+---
+import Base from '../layouts/Base.astro';
+import { IMPERIAL, METRIC, SLIDER_MAX_LOG, SLIDER_MIN_LOG, SLIDER_STEPS, UNITS, convert, formatNumber, metersToSlider } from '../lib/length';
+
+const zones = [
+  { id: 'central', label: 'Central', tz: 'America/Chicago' },
+  { id: 'eastern', label: 'Eastern', tz: 'America/New_York' },
+  { id: 'india', label: 'India', tz: 'Asia/Kolkata', abbr: 'IST' },
+  { id: 'utc', label: 'UTC', tz: 'UTC' },
+];
+
+// Sliders run 00:00 to 23:55 in 5-minute steps.
+const SLIDER_MAX_MINUTES = 1435;
+const hourTicks = [0, 3, 6, 9, 12, 15, 18, 21].map((h) => ({
+  label: h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h - 12}p`,
+  x: ((h * 60) / SLIDER_MAX_MINUTES) * 100,
+}));
+
+const logPosition = (meters: number) => ((Math.log10(meters) - SLIDER_MIN_LOG) / (SLIDER_MAX_LOG - SLIDER_MIN_LOG)) * 100;
+const metricTicks = [
+  { label: '1 mm', m: 1e-3 },
+  { label: '1 cm', m: 1e-2, minor: true },
+  { label: '10 cm', m: 0.1, minor: true },
+  { label: '1 m', m: 1 },
+  { label: '10 m', m: 10, minor: true },
+  { label: '100 m', m: 100, minor: true },
+  { label: '1 km', m: 1e3 },
+  { label: '10 km', m: 1e4, minor: true },
+  { label: '100 km', m: 1e5, minor: true },
+  { label: '1,000 km', m: 1e6 },
+].map((t) => ({ ...t, x: logPosition(t.m) }));
+const imperialTicks = [
+  { label: '1 in', m: 0.0254 },
+  { label: '1 ft', m: 0.3048 },
+  { label: '1 mi', m: 1609.344 },
+  { label: '100 mi', m: 160934.4 },
+].map((t) => ({ ...t, x: logPosition(t.m) }));
+
+// Start the length converter at 1 meter so it renders filled in, even before JS runs.
+const initial = (unit: keyof typeof UNITS) => formatNumber(convert(1, 'm', unit));
+---
+
+<Base title="Tools" description="Time zones, length conversions, and search." noindex>
+  <div class="container tools">
+    <h1 class="visually-hidden">Tools</h1>
+
+    <section class="panel" aria-labelledby="tz-title">
+      <div class="panel__head">
+        <h2 class="panel__title" id="tz-title">Time zones</h2>
+        <div class="panel__actions">
+          <span class="live" id="tz-live"><span class="live__dot" aria-hidden="true"></span>Live</span>
+          <button class="button button--small" id="tz-now" type="button">Now</button>
+        </div>
+        <p class="panel__hint" id="tz-hint">
+          Type into any field (<kbd>3pm</kbd>, <kbd>9/27 9:30am</kbd>, <kbd>2026-09-26 14:30</kbd>) or drag a slider.
+        </p>
+      </div>
+
+      <div class="tz">
+        {
+          zones.map((z) => (
+            <div class="tz__row" data-zone={z.tz} data-abbr={z.abbr}>
+              <div class="tz__label">
+                <label for={`tz-${z.id}`}>{z.label}</label>
+                <span class="tz__meta" data-meta></span>
+              </div>
+              <input
+                class="field tz__input"
+                id={`tz-${z.id}`}
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="tz-hint"
+                data-input
+              />
+              <span class="tz__friendly" data-friendly></span>
+              <input
+                class="tz__slider"
+                type="range"
+                min="0"
+                max={SLIDER_MAX_MINUTES}
+                step="5"
+                aria-label={`${z.label} time of day`}
+                data-slider
+              />
+            </div>
+          ))
+        }
+        <div class="tz__row tz__row--ticks" aria-hidden="true">
+          <div class="ticks tz__ticks">
+            {hourTicks.map((t) => <span style={`--x: ${t.x}%`}>{t.label}</span>)}
+          </div>
+        </div>
+        <div class="tz__row tz__row--unix">
+          <div class="tz__label">
+            <label for="tz-unix">Unix</label>
+            <span class="tz__meta">seconds or ms</span>
+          </div>
+          <input
+            class="field tz__input"
+            id="tz-unix"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <span class="tz__friendly tz__unix-detail" id="tz-unix-detail"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="len-title">
+      <div class="panel__head">
+        <h2 class="panel__title" id="len-title">Length</h2>
+      </div>
+
+      <div class="len">
+        <fieldset class="len__group len__group--metric">
+          <legend class="eyebrow">Metric</legend>
+          <div class="len__fields">
+            {
+              METRIC.map((u) => (
+                <label class="unit">
+                  <span class="unit__name">{UNITS[u].name}</span>
+                  <span class="unit__box">
+                    <input class="unit__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value={initial(u)} data-unit={u} />
+                    <span class="unit__suffix">{u}</span>
+                  </span>
+                </label>
+              ))
+            }
+          </div>
+        </fieldset>
+        <fieldset class="len__group len__group--imperial">
+          <legend class="eyebrow">Imperial</legend>
+          <div class="len__fields">
+            {
+              IMPERIAL.map((u) => (
+                <label class="unit">
+                  <span class="unit__name">{UNITS[u].name}</span>
+                  <span class="unit__box">
+                    <input class="unit__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value={initial(u)} data-unit={u} />
+                    <span class="unit__suffix">{u}</span>
+                  </span>
+                </label>
+              ))
+            }
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="len__scale">
+        <div class="ticks ticks--imperial" aria-hidden="true">
+          {imperialTicks.map((t) => <span style={`--x: ${t.x}%`}>{t.label}</span>)}
+        </div>
+        <input
+          class="len__slider"
+          id="len-slider"
+          type="range"
+          min="0"
+          max={SLIDER_STEPS}
+          step="1"
+          value={metersToSlider(1)}
+          aria-label="Length on a log scale from 1 millimeter to 1,000 kilometers"
+        />
+        <div class="ticks ticks--metric" aria-hidden="true">
+          {metricTicks.map((t) => <span class:list={{ minor: t.minor }} style={`--x: ${t.x}%`}>{t.label}</span>)}
+        </div>
+      </div>
+    </section>
+
+    <section class="search" aria-label="Web search">
+      <form class="search__form" action="https://www.google.com/search" method="get" target="_blank" rel="noopener noreferrer" role="search">
+        <label class="search__engine" for="q-google">Google</label>
+        <input class="search__input" id="q-google" name="q" type="search" placeholder="Search" enterkeyhint="search" required />
+        <button class="search__go" type="submit" aria-label="Search Google in a new tab">
+          <span aria-hidden="true">↗</span>
+        </button>
+      </form>
+      <form class="search__form" action="https://duckduckgo.com/" method="get" target="_blank" rel="noopener noreferrer" role="search">
+        <label class="search__engine" for="q-ddg">DuckDuckGo</label>
+        <input class="search__input" id="q-ddg" name="q" type="search" placeholder="Search" enterkeyhint="search" required />
+        <button class="search__go" type="submit" aria-label="Search DuckDuckGo in a new tab">
+          <span aria-hidden="true">↗</span>
+        </button>
+      </form>
+    </section>
+
+    <p class="extension">
+      <a class="extension__link" href="/downloads/chris-new-tab.zip" download>
+        Chrome new tab extension <span aria-hidden="true">↓</span>
+      </a>
+      <span>
+        Unzip it, open <code>chrome://extensions</code>, turn on Developer mode, choose Load unpacked, and select the
+        <code>chris-new-tab</code> folder.
+      </span>
+    </p>
+  </div>
+</Base>
+
+<script>
+  import {
+    formatOffset,
+    formatWallTime,
+    friendlyTime,
+    instantFromWallTime,
+    offsetMinutes,
+    parseInZone,
+    parseUnix,
+    relativeTime,
+    wallTime,
+    zoneAbbreviation,
+  } from '../lib/time';
+  import {
+    UNITS,
+    formatNumber,
+    fromMicrometers,
+    metersToSlider,
+    parseNumber,
+    roundSignificant,
+    sliderToMeters,
+    toMicrometers,
+    type Unit,
+  } from '../lib/length';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  /* ---------- Time zones ---------- */
+
+  const rows = [...document.querySelectorAll<HTMLElement>('[data-zone]')].map((row) => ({
+    tz: row.dataset.zone!,
+    abbr: row.dataset.abbr,
+    input: row.querySelector<HTMLInputElement>('[data-input]')!,
+    slider: row.querySelector<HTMLInputElement>('[data-slider]')!,
+    meta: row.querySelector<HTMLElement>('[data-meta]')!,
+    friendly: row.querySelector<HTMLElement>('[data-friendly]')!,
+  }));
+  const unixInput = $<HTMLInputElement>('tz-unix');
+  const unixDetail = $('tz-unix-detail');
+  const liveBadge = $('tz-live');
+  const nowButton = $<HTMLButtonElement>('tz-now');
+
+  let instant = Date.now();
+  let live = true;
+  // What a field showed when editing started, so partial input like "12" can't shift the base.
+  let editBase = instant;
+
+  /** Redraws everything except the field being typed in and the slider being dragged. */
+  function renderTime(source?: Element) {
+    const focused = document.activeElement;
+    for (const row of rows) {
+      const w = wallTime(instant, row.tz);
+      const friendly = friendlyTime(instant, row.tz);
+      if (row.input !== focused) {
+        row.input.value = formatWallTime(w);
+        row.input.removeAttribute('aria-invalid');
+      }
+      if (row.slider !== source) row.slider.value = String(w.hour * 60 + w.minute);
+      row.slider.setAttribute('aria-valuetext', friendly);
+      row.meta.textContent = `${zoneAbbreviation(instant, row.tz, row.abbr)} · ${formatOffset(offsetMinutes(instant, row.tz))}`;
+      row.friendly.textContent = friendly;
+    }
+    if (unixInput !== focused) {
+      unixInput.value = String(Math.floor(instant / 1000));
+      unixInput.removeAttribute('aria-invalid');
+    }
+    unixDetail.textContent = `${instant} ms · ${relativeTime(instant, Date.now())}`;
+    liveBadge.hidden = !live;
+    nowButton.disabled = live;
+  }
+
+  function setInstant(next: number, source?: Element) {
+    instant = next;
+    live = false;
+    renderTime(source);
+  }
+
+  /** Applies a typed value; blank or unparseable input leaves the time alone. */
+  function applyTyped(input: HTMLInputElement, parse: () => number | null) {
+    if (!input.value.trim()) return input.removeAttribute('aria-invalid');
+    const next = parse();
+    if (next === null) return input.setAttribute('aria-invalid', 'true');
+    input.removeAttribute('aria-invalid');
+    setInstant(next);
+  }
+
+  for (const row of rows) {
+    row.input.addEventListener('focus', () => (editBase = instant));
+    row.input.addEventListener('input', () => applyTyped(row.input, () => parseInZone(row.input.value, row.tz, editBase)));
+    row.input.addEventListener('blur', () => renderTime());
+    row.input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      row.input.value = formatWallTime(wallTime(instant, row.tz));
+      row.input.removeAttribute('aria-invalid');
+      editBase = instant;
+    });
+
+    row.slider.addEventListener('input', () => {
+      const minutes = Number(row.slider.value);
+      const w = wallTime(instant, row.tz);
+      setInstant(instantFromWallTime({ ...w, hour: Math.floor(minutes / 60), minute: minutes % 60, second: 0 }, row.tz), row.slider);
+    });
+  }
+
+  unixInput.addEventListener('input', () => applyTyped(unixInput, () => parseUnix(unixInput.value)));
+  unixInput.addEventListener('blur', () => renderTime());
+  unixInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') unixInput.value = String(Math.floor(instant / 1000));
+  });
+
+  nowButton.addEventListener('click', () => {
+    live = true;
+    instant = Date.now();
+    renderTime();
+  });
+
+  function tick() {
+    if (live) instant = Date.now();
+    renderTime();
+  }
+
+  // Tick on each second boundary so the seconds change in step with the system clock.
+  (function schedule() {
+    setTimeout(() => {
+      tick();
+      schedule();
+    }, 1000 - (Date.now() % 1000) + 10);
+  })();
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && tick());
+  renderTime();
+
+  /* ---------- Length ---------- */
+
+  const unitInputs = [...document.querySelectorAll<HTMLInputElement>('[data-unit]')].map((el) => ({
+    unit: el.dataset.unit as Unit,
+    el,
+  }));
+  const lengthSlider = $<HTMLInputElement>('len-slider');
+  let micrometers = toMicrometers(1, 'm');
+  // The unit last typed in; the slider rounds values in this unit.
+  let activeUnit: Unit = 'm';
+
+  /** Redraws every field except the one being typed in. */
+  function renderLength(source?: Element) {
+    for (const { unit, el } of unitInputs) {
+      if (el === source) continue;
+      el.value = formatNumber(fromMicrometers(micrometers, unit));
+      el.removeAttribute('aria-invalid');
+    }
+    if (source !== lengthSlider) lengthSlider.value = String(metersToSlider(micrometers / 1e6));
+    lengthSlider.setAttribute('aria-valuetext', `${formatNumber(fromMicrometers(micrometers, activeUnit))} ${activeUnit}`);
+  }
+
+  for (const { unit, el } of unitInputs) {
+    el.addEventListener('focus', () => (activeUnit = unit));
+    el.addEventListener('input', () => {
+      if (!el.value.trim()) return el.removeAttribute('aria-invalid');
+      const value = parseNumber(el.value);
+      if (Number.isNaN(value)) return el.setAttribute('aria-invalid', 'true');
+      el.removeAttribute('aria-invalid');
+      micrometers = toMicrometers(value, unit);
+      renderLength(el);
+    });
+    el.addEventListener('blur', () => renderLength());
+  }
+
+  lengthSlider.addEventListener('input', () => {
+    const meters = sliderToMeters(Number(lengthSlider.value));
+    const value = roundSignificant((meters * 1e6) / UNITS[activeUnit].um, 3);
+    micrometers = toMicrometers(value, activeUnit);
+    renderLength(lengthSlider);
+  });
+
+  renderLength();
+</script>
+
+<style>
+  .tools {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-block: 0.25rem 1.5rem;
+  }
+
+  /* Panels */
+  .panel {
+    padding: clamp(1rem, 2vw, 1.375rem) clamp(1.125rem, 2.5vw, 1.75rem);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: rgb(11 17 27 / 0.72);
+  }
+
+  .panel__head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .panel__title {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .panel__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .panel__hint {
+    grid-column: 1 / -1;
+    margin-top: 0.125rem;
+    color: var(--text-3);
+    font-size: 0.8125rem;
+  }
+
+  kbd {
+    white-space: nowrap;
+    padding: 0.05rem 0.35rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg-input);
+    color: var(--text-2);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+  }
+
+  .button--small {
+    min-height: 2rem;
+    padding: 0.25rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--teal);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .live[hidden] {
+    display: none;
+  }
+
+  .live__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 0 3px var(--teal-wash);
+  }
+
+  /* Shared input look */
+  .field,
+  .unit__box {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .field {
+    width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0.75rem;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .field:focus,
+  .unit__box:focus-within {
+    outline: none;
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px var(--teal-wash);
+  }
+
+  .field[aria-invalid='true'],
+  .unit__box:has(input[aria-invalid='true']) {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgb(242 139 125 / 0.12);
+  }
+
+  /* Time zones */
+  .tz {
+    --label: 9.5rem;
+    --input: 14.25rem;
+    --friendly: 10.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tz__row {
+    display: grid;
+    grid-template-columns: var(--label) var(--input) var(--friendly) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    padding-block: 0.5rem;
+  }
+
+  .tz__row + .tz__row:not(.tz__row--ticks) {
+    border-top: 1px solid var(--line);
+  }
+
+  .tz__row--ticks {
+    padding-block: 0 0.5rem;
+  }
+
+  .tz__row--unix {
+    margin-top: 0.25rem;
+  }
+
+  .tz__label {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+  }
+
+  .tz__label label {
+    font-weight: 600;
+  }
+
+  .tz__meta {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+  }
+
+  .tz__friendly {
+    color: var(--text-2);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .tz__row--unix .tz__unix-detail {
+    grid-column: 3 / -1;
+  }
+
+  .tz__unix-detail {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    white-space: normal;
+  }
+
+  /* Range inputs */
+  input[type='range'] {
+    --thumb-w: 10px;
+    width: 100%;
+    height: 26px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type='range']:focus-visible {
+    outline: none;
+  }
+
+  input[type='range']::-webkit-slider-runnable-track {
+    box-sizing: border-box;
+    height: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--track, var(--bg-input));
+  }
+
+  input[type='range']::-moz-range-track {
+    box-sizing: border-box;
+    height: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--track, var(--bg-input));
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    box-sizing: border-box;
+    width: var(--thumb-w);
+    height: 22px;
+    margin-top: -7px;
+    border: 2px solid var(--bg);
+    border-radius: 999px;
+    background: var(--text);
+    box-shadow: 0 0 0 1px var(--line-strong), 0 2px 8px rgb(0 0 0 / 0.5);
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type='range']::-moz-range-thumb {
+    box-sizing: border-box;
+    width: var(--thumb-w);
+    height: 22px;
+    border: 2px solid var(--bg);
+    border-radius: 999px;
+    background: var(--text);
+    box-shadow: 0 0 0 1px var(--line-strong), 0 2px 8px rgb(0 0 0 / 0.5);
+  }
+
+  input[type='range']:hover::-webkit-slider-thumb,
+  input[type='range']:focus-visible::-webkit-slider-thumb {
+    background: var(--teal-bright);
+    box-shadow: 0 0 0 4px var(--teal-wash), 0 2px 8px rgb(0 0 0 / 0.5);
+  }
+
+  input[type='range']:hover::-moz-range-thumb,
+  input[type='range']:focus-visible::-moz-range-thumb {
+    background: var(--teal-bright);
+    box-shadow: 0 0 0 4px var(--teal-wash), 0 2px 8px rgb(0 0 0 / 0.5);
+  }
+
+  /* Night, twilight, and working hours (9 to 5) along each day. */
+  .tz__slider {
+    --night: #0b1320;
+    --twilight: #13233a;
+    --work: #164a4c;
+    --track: linear-gradient(
+      90deg,
+      var(--night) 0 29.2%,
+      var(--twilight) 29.2% 37.6%,
+      var(--work) 37.6% 71%,
+      var(--twilight) 71% 91.8%,
+      var(--night) 91.8% 100%
+    );
+  }
+
+  /* Tick labels line up with the slider thumb's travel. */
+  .ticks {
+    position: relative;
+    height: 1.25rem;
+    margin-inline: calc(var(--thumb-w, 10px) / 2);
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+  }
+
+  .ticks span {
+    position: absolute;
+    left: var(--x);
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .tz__ticks {
+    grid-column: 4;
+  }
+
+  /* Length */
+  .len {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 3fr);
+    gap: 1rem 2rem;
+  }
+
+  .len__group {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .len__group legend {
+    margin-bottom: 0.625rem;
+    padding: 0;
+  }
+
+  .len__group--metric legend {
+    color: var(--teal);
+  }
+
+  .len__group--imperial legend {
+    color: var(--amber);
+  }
+
+  .len__fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    gap: 0.75rem;
+  }
+
+  .unit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  .unit__name {
+    color: var(--text-3);
+    font-size: 0.8125rem;
+  }
+
+  .unit__box {
+    display: flex;
+    align-items: center;
+  }
+
+  .unit__input {
+    width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0 0.5rem 0.75rem;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .unit__input:focus {
+    outline: none;
+  }
+
+  .unit__suffix {
+    padding-inline: 0.5rem 0.75rem;
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+
+  .len__scale {
+    margin-top: 1rem;
+  }
+
+  .len__slider {
+    --thumb-w: 12px;
+    --track: linear-gradient(90deg, rgb(79 209 193 / 0.14), rgb(240 179 91 / 0.14));
+  }
+
+  .ticks--imperial {
+    --thumb-w: 12px;
+    color: var(--amber);
+    opacity: 0.85;
+  }
+
+  .ticks--metric {
+    --thumb-w: 12px;
+  }
+
+  /* Search */
+  .search {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .search__form {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--bg-raised);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .search__form:focus-within {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 4px var(--teal-wash);
+  }
+
+  .search__engine {
+    flex: none;
+    padding: 0 0.875rem 0 1.25rem;
+    border-right: 1px solid var(--line);
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: text;
+  }
+
+  .search__input {
+    flex: 1;
+    min-width: 0;
+    height: 3.25rem;
+    padding: 0 1rem;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 1rem;
+  }
+
+  .search__input::placeholder {
+    color: var(--text-3);
+  }
+
+  .search__input:focus {
+    outline: none;
+  }
+
+  .search__input::-webkit-search-cancel-button {
+    filter: grayscale(1) brightness(1.4);
+  }
+
+  .search__go {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-right: 0.375rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--bg-input);
+    color: var(--teal);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .search__go:hover {
+    background: var(--teal);
+    color: #04110f;
+  }
+
+  /* Extension download, kept quiet since this is my start page */
+  .extension {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+    color: var(--text-3);
+    font-size: 0.8125rem;
+  }
+
+  .extension__link {
+    color: var(--teal);
+    font-weight: 500;
+    transition: color 0.15s ease;
+  }
+
+  .extension__link:hover {
+    color: var(--teal-bright);
+  }
+
+  .extension code {
+    padding: 0.05rem 0.35rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg-input);
+    color: var(--text-2);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  /* Narrower screens */
+  @media (max-width: 1060px) {
+    .tz__row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'label friendly'
+        'input input'
+        'slider slider';
+      padding-block: 0.75rem;
+    }
+
+    .tz__label {
+      grid-area: label;
+    }
+
+    .tz__input {
+      grid-area: input;
+    }
+
+    .tz__friendly {
+      grid-area: friendly;
+    }
+
+    .tz__slider {
+      grid-area: slider;
+    }
+
+    .tz__row--ticks {
+      display: none;
+    }
+
+    .tz__row--unix {
+      grid-template-areas:
+        'label label'
+        'input input'
+        'friendly friendly';
+    }
+
+    .tz__row--unix .tz__unix-detail {
+      grid-area: friendly;
+    }
+
+    .len {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .search {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ticks .minor {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,207 @@
+# Single source of truth for the site. The home page, About, Work, Contact,
+# résumé, and JSON-LD structured data all read from this file. It is validated
+# at build time (src/lib/profile.ts), so a typo fails the build instead of
+# shipping a broken page.
+
+name: Chris Elkins
+headline: Engineering leader, technologist, and software builder.
+
+# Used for search results and link previews.
+description: >-
+  CIO and Head of Engineering at Speakeasy. Engineering leadership, SaaS, cloud
+  infrastructure, networking, and security. Also owner of Ryse Software, Active
+  DataComm, and Vitality South.
+
+intro: >-
+  I'm CIO and Head of Engineering at Speakeasy, where I lead engineering and
+  run day-to-day DevOps for the platform behind venues, festivals, and live
+  events. I also own three technology companies in Tupelo, Mississippi, and I
+  work hands-on from business requirements down to code, databases, cloud
+  infrastructure, networking, security, and production operations.
+
+location:
+  city: Tupelo
+  region: Mississippi
+  regionCode: MS
+  country: US
+
+# Uncomment to publish an email address on the Contact page and résumé.
+# email: you@example.com
+
+links:
+  linkedin: https://www.linkedin.com/in/ccelkins/
+  github: https://github.com/chriselkins
+  credly: https://www.credly.com/users/chriselkins/badges/credly
+
+roles:
+  # The first role is my primary one and gets top billing across the site.
+  - organization: Speakeasy
+    url: https://speakeasygo.com/
+    logo: /images/speakeasy.svg
+    title: CIO & Head of Engineering
+    start: 2026-09
+    location: New York, NY · Remote
+    summary: >-
+      Speakeasy is the operations and intelligence infrastructure behind live
+      experiences. Venues, festivals, and event organizers use it to sell
+      tickets and tables, manage guests at the door, and stay connected with
+      their customers. I lead the engineering team and run day-to-day DevOps
+      for the platform.
+    highlights:
+      - Lead the engineering team, from priorities and architecture to delivery
+      - Run day-to-day DevOps across infrastructure, deployments, monitoring, and incident response
+      - Build reliability, observability, and security into the platform by default
+
+  - organization: Ryse Software
+    url: https://rysesoftware.com/
+    title: Owner & VP of Technology
+    start: 2026-01
+    location: Tupelo, MS
+    summary: >-
+      I founded Ryse Software to work as a software department on a flat
+      monthly rate: senior engineers who build, then keep running, custom web
+      and mobile applications, client portals, dashboards, integrations, and
+      automation. I lead its technology, from architecture and security
+      through delivery.
+    highlights:
+      - Founded the company and lead architecture, security, and delivery across every client platform
+      - Built the ITP Virtual Career Expo (web, iOS, and Android) for 17 Northeast Mississippi counties, then redeployed it statewide in North Carolina
+      - Built an LMS and business-planning platform for a CDFI, SMS/MMS shift broadcasting for a staffing firm, and a unified CRM and client portal
+
+  - organization: Active DataComm
+    url: https://callactive.com/
+    title: Owner & VP of Technology
+    start: 2024-10
+    location: Tupelo, MS
+    summary: >-
+      Active DataComm has been the IT department for businesses,
+      organizations, and churches in and around Tupelo since 2001. I own the
+      company and lead its technology across managed services, networking,
+      security, and support.
+    highlights:
+      - Set technical direction and standards for managed services and support
+      - Design networks, security, and backups for client businesses
+      - Lead larger projects such as Microsoft 365 migrations and network rebuilds
+
+  - organization: Vitality South
+    url: https://vitalitysouth.com/
+    title: Owner & VP of Technology
+    start: 2021-01
+    location: Tupelo, MS
+    summary: >-
+      Vitality South is a full-service agency with marketing, software
+      development, and IT under one roof. I lead the software development and
+      cybersecurity teams, building custom software for businesses that need
+      more than off-the-shelf tools.
+    highlights:
+      - Lead the software development and cybersecurity teams
+      - Build custom software and web applications, from data model to deployment
+      - Run hosting, infrastructure, and security for client sites and systems, including PCI work
+
+# Shown at the end of the career timeline.
+earlier: >-
+  Before Vitality South, I worked in IT for companies across the U.S., then
+  moved back to Tupelo to serve as IT Director at Journal, Inc. for five years.
+
+# Supporting work, listed after the initiatives rather than as headline items.
+alsoWorkedOn:
+  - Custom Debian routers and networking
+  - Bitwarden deployment
+  - Cloudflare security
+  - MySQL migrations
+
+lanes:
+  - title: Engineering leadership
+    body: >-
+      I lead engineering teams and run day-to-day DevOps: setting priorities,
+      making architecture calls, reviewing code, and keeping production
+      healthy. Teams that communicate well build better systems.
+  - title: Software & SaaS
+    body: >-
+      I design and build SaaS platforms and custom software, from the data
+      model and APIs to billing, deployment, and the internal tools teams use
+      every day.
+  - title: Infrastructure & security
+    body: >-
+      Cloud infrastructure, Linux, networking, and security programs. As a
+      CISSP, I treat security as part of the architecture, not a checklist at
+      the end.
+
+motto: Understand the problem, build the right thing, and make it dependable.
+
+principles:
+  - title: Operational simplicity
+    body: >-
+      Fewer moving parts, well-understood tools, and systems that are easy to
+      observe, debug, and hand off. Simple systems are the ones that stay up.
+  - title: Automate the repetitive work
+    body: >-
+      If a task gets done by hand more than twice, it becomes a script, a
+      pipeline, or a scheduled job, so people can spend their time on
+      judgment.
+  - title: Security is part of the architecture
+    body: >-
+      Least privilege, safe defaults, and audit trails are designed in from
+      the start, not bolted on before an audit.
+  - title: Safe, incremental production changes
+    body: >-
+      Small, reversible changes, observable rollouts, and a rollback plan
+      before every deploy.
+
+stack:
+  - label: Languages
+    items: [Go, TypeScript, JavaScript, SQL]
+  - label: Web
+    items: [Vue, Next.js]
+  - label: Data
+    items: [MySQL]
+  - label: Cloud
+    items: [AWS]
+  - label: Systems
+    items: [Linux (Debian), Networking]
+  - label: Security
+    items: [CISSP, Security+, SOC 2, PCI]
+  - label: Practice
+    items: [Automation, Observability, CI/CD]
+
+# The first certification is the one I lead with (hero, link preview).
+# Mentions of each abbreviation in page text link to its verification page.
+certifications:
+  - name: Certified Information Systems Security Professional
+    abbreviation: CISSP
+    issuer: ISC2
+    issued: 2023-02
+    expires: 2029-02
+    credentialId: 80bf69b2-1143-46af-8bb3-b89890fe4790
+    url: https://www.credly.com/badges/80bf69b2-1143-46af-8bb3-b89890fe4790/public_url
+  - name: CompTIA Security+
+    abbreviation: Security+
+    issuer: CompTIA
+    issued: 2022-03
+    expires: 2031-03
+    credentialId: 6f7ca0ee-c657-403f-a3d9-bbc1c3fc809e
+    url: https://www.credly.com/badges/6f7ca0ee-c657-403f-a3d9-bbc1c3fc809e/public_url
+
+about:
+  - >-
+    I'm CIO and Head of Engineering at Speakeasy, where I lead the engineering
+    team and run day-to-day DevOps for a SaaS platform that helps venues sell
+    tickets and tables, manage guests at the door, and stay connected with
+    their customers.
+  - >-
+    I also own Ryse Software, Vitality South, and Active DataComm in Tupelo,
+    Mississippi, which provide custom software development, marketing, and IT
+    managed services.
+    Our teams build custom software and technology solutions for businesses
+    that need more than off-the-shelf tools. We treat IT as something that
+    should move a business forward, not just keep the lights on, and we learn
+    how a business works before we apply technology to it.
+  - >-
+    My work: understand the problem, build the right thing, and make it
+    dependable. I care about clean architecture, observability, security by
+    default, and teams that communicate well.
+
+contact: >-
+  If you'd like to talk about engineering leadership, platform reliability,
+  custom software, or the technology side of hospitality and nightlife, let's
+  connect.

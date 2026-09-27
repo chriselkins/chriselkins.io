@@ -1,0 +1,36 @@
+---
+/**
+ * A pre-optimized photo from public/images/ (made by `npm run images`),
+ * served as WebP with a JPEG fallback.
+ */
+interface Props {
+  /** Base name, e.g. "headshot" for /images/headshot-640.webp */
+  name: string;
+  alt: string;
+  widths: number[];
+  /** Width / height, e.g. 1 for square, 0.8 for 4:5. */
+  ratio: number;
+  sizes: string;
+  eager?: boolean;
+  class?: string;
+}
+
+const { name, alt, widths, ratio, sizes, eager = false, class: className } = Astro.props;
+const srcset = (ext: string) => widths.map((w) => `/images/${name}-${w}.${ext} ${w}w`).join(', ');
+const largest = Math.max(...widths);
+---
+
+<picture class={className}>
+  <source type="image/webp" srcset={srcset('webp')} sizes={sizes} />
+  <img
+    src={`/images/${name}-${largest}.jpg`}
+    srcset={srcset('jpg')}
+    sizes={sizes}
+    alt={alt}
+    width={largest}
+    height={Math.round(largest / ratio)}
+    loading={eager ? 'eager' : 'lazy'}
+    fetchpriority={eager ? 'high' : undefined}
+    decoding="async"
+  />
+</picture>

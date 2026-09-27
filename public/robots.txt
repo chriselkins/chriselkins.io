@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://chriselkins.io/sitemap-index.xml

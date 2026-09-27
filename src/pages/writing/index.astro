@@ -1,0 +1,40 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostList from '../../components/PostList.astro';
+import { getPosts } from '../../lib/content';
+
+const posts = await getPosts();
+---
+
+<Base title="Writing" description="Short technical notes on problems I solve repeatedly.">
+  <header class="page-head">
+    <div class="container">
+      <p class="eyebrow eyebrow--teal">Writing</p>
+      <h1>Notes</h1>
+      <p class="lede">
+        Short technical notes on problems I solve repeatedly: databases, cloud architecture, security programs,
+        networking, and billing.
+      </p>
+    </div>
+  </header>
+
+  <section class="section" aria-label="All notes">
+    <div class="container">
+      {
+        posts.length > 0 ? (
+          <PostList posts={posts} />
+        ) : (
+          <p class="empty">
+            The first notes are on the way. <a class="link" href="/rss.xml">Subscribe with RSS</a> to catch them.
+          </p>
+        )
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .empty {
+    color: var(--text-2);
+  }
+</style>

@@ -1,0 +1,23 @@
+---
+/**
+ * Renders plain text with every mention of one of my companies (roles in
+ * profile.yaml) linked to its website, and every certification abbreviation
+ * (CISSP, Security+) linked to its verification page.
+ */
+import { profile } from '../lib/profile';
+
+interface Props {
+  text: string;
+}
+
+const targets = new Map([
+  ...profile.roles.map((role) => [role.organization, role.url] as const),
+  ...profile.certifications.flatMap((cert) => (cert.url ? [[cert.abbreviation, cert.url] as const] : [])),
+]);
+// Longest names first so one name can't shadow another that contains it.
+const names = [...targets.keys()].sort((a, b) => b.length - a.length);
+const pattern = new RegExp(`(${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`);
+const parts = Astro.props.text.split(pattern);
+---
+
+{parts.map((part) => (targets.has(part) ? <a class="link" href={targets.get(part)} rel="noopener">{part}</a> : part))}

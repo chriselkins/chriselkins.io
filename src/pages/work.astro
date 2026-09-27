@@ -1,0 +1,282 @@
+---
+import Base from '../layouts/Base.astro';
+import Linked from '../components/Linked.astro';
+import { profile, type Role } from '../lib/profile';
+import { range, year } from '../lib/dates';
+
+// The first role is my primary one; the rest are companies I own.
+const [featured, ...owned] = profile.roles;
+const ownedNames = owned.map((r) => r.organization);
+const ownedList = `${ownedNames.slice(0, -1).join(', ')}, and ${ownedNames.at(-1)}`;
+
+// Career timeline: roles and certifications, newest first, then "earlier".
+const timeline = [
+  ...profile.roles.map((r) => ({ when: r.start, title: r.title, detail: r.organization })),
+  ...profile.certifications.map((c) => ({ when: c.issued, title: `${c.abbreviation} certification`, detail: c.issuer })),
+].sort((a, b) => b.when.localeCompare(a.when));
+
+const host = (role: Role) => new URL(role.url).hostname.replace(/^www\./, '');
+---
+
+<Base title="Work" description={`What I do at ${featured.organization}, ${ownedList}.`}>
+  <header class="page-head">
+    <div class="container">
+      <p class="eyebrow eyebrow--teal">Work</p>
+      <h1>Current work</h1>
+      <p class="lede">
+        <Linked
+          text={`My primary role is leading engineering at ${featured.organization}. I also own ${ownedList}. The common thread is taking a business problem all the way down to the code, the infrastructure, and the operations that keep it running.`}
+        />
+      </p>
+    </div>
+  </header>
+
+  <section class="section" aria-label={`${featured.organization}, my primary role`}>
+    <div class="container">
+      <article class="card role role--featured">
+        <div class="role__head">
+          <div>
+            <p class="eyebrow eyebrow--teal">{featured.title}</p>
+            <h2>
+              <a href={featured.url} rel="noopener">
+                {featured.logo ? <img class="role__logo" src={featured.logo} alt={featured.organization} width="189" height="40" /> : featured.organization}
+              </a>
+            </h2>
+          </div>
+          <p class="role__meta">{range(featured.start, featured.end)}<br />{featured.location}</p>
+        </div>
+        <div class="role__body">
+          <p class="role__summary"><Linked text={featured.summary} /></p>
+          <div>
+            <h3 class="eyebrow">What I do</h3>
+            <ul class="role__list">
+              {featured.highlights.map((h) => <li><Linked text={h} /></li>)}
+            </ul>
+          </div>
+        </div>
+        <a class="arrow-link" href={featured.url} rel="noopener">{host(featured)} <span aria-hidden="true">↗</span></a>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="owned">
+    <div class="container">
+      <h2 class="eyebrow owned-title" id="owned">Companies I own</h2>
+      <div class="roles">
+        {
+          owned.map((role) => (
+            <article class="card role">
+              <p class="eyebrow eyebrow--teal">{role.title}</p>
+              <h3 class="role__name">
+                <a href={role.url} rel="noopener">
+                  {role.organization}
+                </a>
+              </h3>
+              <p class="role__meta">
+                {range(role.start, role.end)} · {role.location}
+              </p>
+              <p class="role__summary">
+                <Linked text={role.summary} />
+              </p>
+              <ul class="role__list">
+                {role.highlights.map((h) => (
+                  <li>
+                    <Linked text={h} />
+                  </li>
+                ))}
+              </ul>
+              <a class="arrow-link" href={role.url} rel="noopener">
+                {host(role)} <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="career">
+    <div class="container row">
+      <div class="side">
+        <h2 class="eyebrow" id="career">Career</h2>
+        <a class="arrow-link" href="/resume/">Résumé <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+      <ol role="list" class="timeline">
+        {
+          timeline.map((item) => (
+            <li>
+              <span class="timeline__when">{year(item.when)}</span>
+              <span class="timeline__what">
+                <Linked text={item.title} />{' '}
+                <span class="muted">
+                  · <Linked text={item.detail} />
+                </span>
+              </span>
+            </li>
+          ))
+        }
+        {
+          profile.earlier && (
+            <li>
+              <span class="timeline__when">Earlier</span>
+              <span class="timeline__what muted">
+                <Linked text={profile.earlier} />
+              </span>
+            </li>
+          )
+        }
+      </ol>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .role {
+    gap: 0.75rem;
+  }
+
+  .role h2,
+  .role__name {
+    font-size: 1.5rem;
+    letter-spacing: -0.025em;
+  }
+
+  .role h2 a,
+  .role__name a {
+    transition: color 0.15s ease;
+  }
+
+  .role h2 a:hover,
+  .role__name a:hover {
+    color: var(--teal-bright);
+  }
+
+  .role__logo {
+    width: 189px;
+    height: auto;
+  }
+
+  .owned-title {
+    margin-bottom: 1.25rem;
+  }
+
+  .role__meta {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+
+  .role__summary {
+    color: var(--text-2);
+  }
+
+  .role__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+    padding: 0;
+    list-style: none;
+    font-size: 0.96875rem;
+  }
+
+  .role__list li {
+    position: relative;
+    padding-left: 1.25rem;
+  }
+
+  .role__list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 0.5rem;
+    height: 1px;
+    background: var(--teal);
+  }
+
+  .role .arrow-link {
+    margin-top: auto;
+    padding-top: 0.75rem;
+  }
+
+  .role--featured {
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    gap: 1.75rem;
+    border-color: var(--line-strong);
+    background:
+      radial-gradient(600px 300px at 100% 0%, rgb(79 209 193 / 0.07), transparent 70%),
+      var(--bg-raised);
+  }
+
+  .role--featured h2 {
+    margin-top: 0.875rem;
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+  }
+
+  .role__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+  }
+
+  .role--featured .role__meta {
+    text-align: right;
+  }
+
+  .role__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 1.5rem 3rem;
+  }
+
+  .role--featured .role__summary {
+    font-size: 1.0625rem;
+  }
+
+  .role--featured .role__list {
+    margin-top: 0.875rem;
+  }
+
+  .role--featured .arrow-link {
+    padding-top: 0;
+  }
+
+  .roles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+    gap: 1rem;
+  }
+
+  .timeline {
+    border-top: 1px solid var(--line);
+  }
+
+  .timeline li {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: 0.25rem 1.5rem;
+    padding-block: 0.875rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .timeline__when {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    padding-top: 0.15rem;
+  }
+
+  @media (max-width: 800px) {
+    .role__body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .role--featured .role__meta {
+      text-align: left;
+    }
+  }
+</style>

@@ -1,0 +1,225 @@
+---
+import Base from '../layouts/Base.astro';
+import Photo from '../components/Photo.astro';
+import Linked from '../components/Linked.astro';
+import { profile } from '../lib/profile';
+import { monthYear } from '../lib/dates';
+---
+
+<Base title="About" description={`About ${profile.name}: ${profile.headline}`}>
+  <header class="page-head">
+    <div class="container">
+      <p class="eyebrow eyebrow--teal">About</p>
+      <h1>From business requirements down to production.</h1>
+    </div>
+  </header>
+
+  <section class="section" aria-label="Biography">
+    <div class="container about">
+      <div class="about__bio">
+        {
+          profile.about.map((paragraph) => (
+            <p>
+              <Linked text={paragraph} />
+            </p>
+          ))
+        }
+        <p>
+          <a class="arrow-link" href="/work/">Current work <span class="arrow" aria-hidden="true">→</span></a>
+        </p>
+      </div>
+      <div class="about__photo">
+        <Photo
+          name="outdoors"
+          alt={`${profile.name} hiking with a backpack in a forest`}
+          widths={[480, 960]}
+          ratio={0.8}
+          sizes="(max-width: 800px) 100vw, 340px"
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="stack">
+    <div class="container row">
+      <h2 class="eyebrow" id="stack">Technical profile</h2>
+      <dl class="stack">
+        {
+          profile.stack.map((group) => (
+            <div class="stack__row">
+              <dt>{group.label}</dt>
+              <dd>
+                <Linked text={group.items.join(' · ')} />
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="certifications">
+    <div class="container row">
+      <h2 class="eyebrow" id="certifications">Certifications</h2>
+      <div>
+        <ul role="list" class="certs">
+          {
+            profile.certifications.map((cert) => (
+              <li class="card cert">
+                <div class="cert__head">
+                  <span class="cert__abbr">{cert.abbreviation}</span>
+                  <span class="cert__issuer">{cert.issuer}</span>
+                </div>
+                <p class="cert__name">{cert.name}</p>
+                <p class="cert__meta">
+                  Issued {monthYear(cert.issued)}
+                  {cert.expires && <span> · Valid through {monthYear(cert.expires)}</span>}
+                </p>
+                {cert.url && (
+                  <a class="arrow-link" href={cert.url} rel="noopener">
+                    Verify credential <span aria-hidden="true">↗</span>
+                  </a>
+                )}
+              </li>
+            ))
+          }
+        </ul>
+        {
+          profile.links.credly && (
+            <p class="credly">
+              <a class="arrow-link" href={profile.links.credly} rel="me noopener">
+                All badges on Credly <span aria-hidden="true">↗</span>
+              </a>
+            </p>
+          )
+        }
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .about {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 3rem 5rem;
+    align-items: start;
+  }
+
+  .about__bio {
+    display: flex;
+    flex-direction: column;
+    gap: 1.375rem;
+    max-width: 40rem;
+    color: var(--text-2);
+    font-size: 1.1875rem;
+    line-height: 1.7;
+  }
+
+  .about__bio p:first-child {
+    color: var(--text);
+  }
+
+  .about__photo {
+    padding: 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: 20px;
+    background: var(--bg-raised);
+  }
+
+  .about__photo :global(img) {
+    border-radius: 14px;
+  }
+
+  .stack {
+    border-top: 1px solid var(--line);
+  }
+
+  .stack__row {
+    display: grid;
+    grid-template-columns: 9rem minmax(0, 1fr);
+    gap: 0.25rem 1.5rem;
+    padding-block: 0.875rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stack dt {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    padding-top: 0.15rem;
+  }
+
+  .stack dd {
+    color: var(--text);
+  }
+
+  .certs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+    max-width: 48rem;
+  }
+
+  .credly {
+    margin-top: 1.25rem;
+  }
+
+  .cert {
+    gap: 0.625rem;
+  }
+
+  .cert__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* The first certification (CISSP) leads; the rest are quieter. */
+  .cert:not(:first-child) .cert__abbr {
+    color: var(--text);
+  }
+
+  .cert__abbr {
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+
+  .cert__issuer {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+
+  .cert__name {
+    font-size: 1.0625rem;
+    font-weight: 500;
+  }
+
+  .cert__meta {
+    color: var(--text-2);
+    font-size: 0.9375rem;
+  }
+
+  .cert .arrow-link {
+    margin-top: 0.375rem;
+  }
+
+  @media (max-width: 800px) {
+    .about {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .about__photo {
+      max-width: 420px;
+    }
+
+    .stack__row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

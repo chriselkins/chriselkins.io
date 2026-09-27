@@ -1,0 +1,470 @@
+---
+import Base from '../layouts/Base.astro';
+import Photo from '../components/Photo.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import PostList from '../components/PostList.astro';
+import JsonLd from '../components/JsonLd.astro';
+import Linked from '../components/Linked.astro';
+import { profile } from '../lib/profile';
+import { getPosts, getProjects } from '../lib/content';
+import { year } from '../lib/dates';
+import { personJsonLd } from '../lib/jsonld';
+
+const site = Astro.site ?? new URL('https://chriselkins.io');
+const featured = (await getProjects()).filter((p) => p.data.featured).slice(0, 6);
+const posts = (await getPosts()).slice(0, 3);
+const pad = (n: number) => String(n).padStart(2, '0');
+
+// My primary role leads; the companies I own are grouped by title underneath.
+const [primary, ...owned] = profile.roles;
+const [leadCert] = profile.certifications;
+const ownedByTitle = Object.entries(Object.groupBy(owned, (role) => role.title));
+// With an odd number of featured cards, the first (flagship) spans the full row.
+const wideFirst = featured.length % 2 === 1;
+---
+
+<Base>
+  <JsonLd slot="head" data={personJsonLd(site)} />
+
+  <section class="hero">
+    <div class="container hero__grid">
+      <div class="hero__text">
+        <p class="eyebrow eyebrow--teal hero__role">
+          {primary.title} at <a href={primary.url} rel="noopener">{primary.organization}</a>
+          {leadCert && (
+            <>
+              {' · '}
+              <a href={leadCert.url} rel="noopener">{leadCert.abbreviation}</a>
+            </>
+          )}
+        </p>
+        <h1 class="hero__name">{profile.name}</h1>
+        <p class="hero__headline">{profile.headline}</p>
+        <p class="hero__intro"><Linked text={profile.intro} /></p>
+
+        <div class="currently">
+          <div class="currently__head">
+            <h2 class="eyebrow">Currently</h2>
+            <a class="arrow-link" href="/work/">Details <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+          <a class="primary-role" href={primary.url} rel="noopener">
+            {
+              primary.logo ? (
+                <img class="primary-role__logo" src={primary.logo} alt={primary.organization} width="118" height="25" />
+              ) : (
+                <span class="primary-role__org">{primary.organization}</span>
+              )
+            }
+            <span class="primary-role__title">{primary.title}</span>
+            <span class="currently__since">since {year(primary.start)}</span>
+          </a>
+          {
+            ownedByTitle.map(([title, roles]) => (
+              <div class="owned">
+                <h3 class="eyebrow owned__title">{title}</h3>
+                <ul role="list">
+                  {roles?.map((role) => (
+                    <li class="currently__role">
+                      <a class="currently__org" href={role.url} rel="noopener">
+                        {role.organization}
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                      <span class="currently__since">since {year(role.start)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          }
+        </div>
+
+        <ul role="list" class="hero__links">
+          <li><a class="arrow-link" href={profile.links.linkedin} rel="me noopener">LinkedIn <span aria-hidden="true">↗</span></a></li>
+          <li><a class="arrow-link" href={profile.links.github} rel="me noopener">GitHub <span aria-hidden="true">↗</span></a></li>
+          <li><a class="arrow-link" href="/contact/">Contact <span class="arrow" aria-hidden="true">→</span></a></li>
+        </ul>
+      </div>
+
+      <div class="hero__photo">
+        <Photo
+          name="headshot"
+          alt={`Portrait of ${profile.name}`}
+          widths={[320, 640, 960]}
+          ratio={1}
+          sizes="(max-width: 800px) 200px, 320px"
+          eager
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="what-i-do">
+    <div class="container row">
+      <h2 class="eyebrow" id="what-i-do">What I do</h2>
+      <div class="lanes">
+        {
+          profile.lanes.map((lane, i) => (
+            <article class="lane">
+              <p class="lane__num">{pad(i + 1)}</p>
+              <h3>{lane.title}</h3>
+              <p>
+                <Linked text={lane.body} />
+              </p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="selected-work">
+    <div class="container row">
+      <div class="side">
+        <h2 class="eyebrow" id="selected-work">Selected initiatives</h2>
+        <a class="arrow-link" href="/projects/">All initiatives <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+      <ul role="list" class="projects-grid">
+        {
+          featured.map((project, i) => (
+            <li class:list={{ wide: wideFirst && i === 0 }}>
+              <ProjectCard project={project} />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="how-i-work">
+    <div class="container row">
+      <h2 class="eyebrow" id="how-i-work">How I work</h2>
+      <div>
+        <p class="motto">{profile.motto}</p>
+        <ol role="list" class="principles">
+          {
+            profile.principles.map((principle, i) => (
+              <li>
+                <span class="principles__num">{pad(i + 1)}</span>
+                <h3>{principle.title}</h3>
+                <p>{principle.body}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  {
+    posts.length > 0 && (
+      <section class="section" aria-labelledby="writing">
+        <div class="container row">
+          <div class="side">
+            <h2 class="eyebrow" id="writing">Writing</h2>
+            <a class="arrow-link" href="/writing/">All notes <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+          <PostList posts={posts} />
+        </div>
+      </section>
+    )
+  }
+
+  <section class="section" aria-labelledby="contact">
+    <div class="container row">
+      <h2 class="eyebrow" id="contact">Contact</h2>
+      <div>
+        <p class="cta">{profile.contact}</p>
+        <ul role="list" class="hero__links">
+          <li><a class="arrow-link" href={profile.links.linkedin} rel="me noopener">Connect on LinkedIn <span aria-hidden="true">↗</span></a></li>
+          {profile.email && <li><a class="arrow-link" href={`mailto:${profile.email}`}>{profile.email}</a></li>}
+          <li><a class="arrow-link" href={profile.links.github} rel="me noopener">GitHub <span aria-hidden="true">↗</span></a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Hero */
+  .hero {
+    padding-block: clamp(3rem, 8vw, 6.5rem) clamp(4rem, 8vw, 6rem);
+  }
+
+  .hero__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 3rem 5rem;
+  }
+
+  .hero__name {
+    margin-top: 1rem;
+    font-size: clamp(2.75rem, 7vw, 4.75rem);
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: -0.045em;
+  }
+
+  .hero__headline {
+    margin-top: 1.25rem;
+    color: var(--text);
+    font-size: clamp(1.25rem, 2.4vw, 1.625rem);
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+  }
+
+  .hero__intro {
+    margin-top: 1.25rem;
+    max-width: 38rem;
+    color: var(--text-2);
+    font-size: 1.125rem;
+    line-height: 1.7;
+  }
+
+  .hero__photo {
+    width: 320px;
+    padding: 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: 22px;
+    background: var(--bg-raised);
+  }
+
+  .hero__photo :global(img) {
+    border-radius: 16px;
+  }
+
+  .currently {
+    margin-top: 2.75rem;
+    max-width: 40rem;
+  }
+
+  .currently__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .currently__head .arrow-link {
+    font-size: 0.875rem;
+  }
+
+  .hero__role a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgb(79 209 193 / 0.4);
+    text-underline-offset: 0.25em;
+  }
+
+  .hero__role a:hover {
+    color: var(--teal-bright);
+    text-decoration-color: currentColor;
+  }
+
+  /* Speakeasy, my primary role, gets its own highlighted row. */
+  .primary-role {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem 1.5rem;
+    margin-top: 0.875rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background:
+      radial-gradient(400px 120px at 0% 0%, rgb(79 209 193 / 0.08), transparent 70%),
+      var(--bg-raised);
+    transition: border-color 0.15s ease;
+  }
+
+  .primary-role:hover {
+    border-color: var(--teal);
+  }
+
+  .primary-role__logo {
+    width: 118px;
+    height: auto;
+  }
+
+  .primary-role__org {
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .primary-role__title {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .owned {
+    margin-top: 1.5rem;
+  }
+
+  .owned ul {
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .currently__role {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1.5rem;
+    padding-block: 0.625rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9875rem;
+  }
+
+  .currently__org {
+    color: var(--text-2);
+    transition: color 0.15s ease;
+  }
+
+  .currently__org span {
+    color: var(--text-3);
+    font-size: 0.8em;
+  }
+
+  .currently__org:hover {
+    color: var(--teal-bright);
+  }
+
+  .currently__since {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+
+  .hero__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.75rem;
+    margin-top: 2rem;
+  }
+
+  /* Sections */
+  .side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .lanes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.5rem;
+  }
+
+  .lane {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line-strong);
+  }
+
+  .lane__num,
+  .principles__num {
+    color: var(--teal);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+
+  .lane h3 {
+    margin-top: 0.75rem;
+    font-size: 1.1875rem;
+  }
+
+  .lane p:last-child {
+    margin-top: 0.75rem;
+    color: var(--text-2);
+    font-size: 0.96875rem;
+    line-height: 1.65;
+  }
+
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .projects-grid .wide {
+    grid-column: 1 / -1;
+  }
+
+  .motto {
+    max-width: 40rem;
+    padding-left: 1.25rem;
+    border-left: 2px solid var(--amber);
+    font-size: clamp(1.375rem, 2.6vw, 1.75rem);
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.25rem 3rem;
+    margin-top: 3rem;
+  }
+
+  .principles h3 {
+    margin-top: 0.5rem;
+    font-size: 1.0625rem;
+  }
+
+  .principles p {
+    margin-top: 0.5rem;
+    color: var(--text-2);
+    font-size: 0.96875rem;
+  }
+
+  .cta {
+    max-width: 40rem;
+    font-size: clamp(1.25rem, 2.2vw, 1.5rem);
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: -0.015em;
+  }
+
+  @media (max-width: 1000px) {
+    .lanes {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2rem;
+    }
+  }
+
+  @media (max-width: 800px) {
+    .hero__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hero__photo {
+      grid-row: 1;
+      width: 176px;
+      border-radius: 18px;
+      padding: 5px;
+    }
+
+    .hero__photo :global(img) {
+      border-radius: 13px;
+    }
+
+    .projects-grid,
+    .principles {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .primary-role {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .primary-role__title {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+</style>

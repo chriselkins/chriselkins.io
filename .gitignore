@@ -1,0 +1,11 @@
+.env
+/local/
+
+# Original photos stay local: they can carry EXIF/GPS metadata. Only the
+# stripped, optimized copies in public/images/ are committed.
+/photos/
+
+# Build output, generated types, dependencies
+dist/
+.astro/
+node_modules/

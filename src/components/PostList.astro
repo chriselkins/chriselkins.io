@@ -1,0 +1,83 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { isoDate, postDate } from '../lib/dates';
+
+interface Props {
+  posts: CollectionEntry<'writing'>[];
+}
+const { posts } = Astro.props;
+---
+
+<ul role="list" class="post-list">
+  {
+    posts.map((post) => (
+      <li>
+        <a class="post-list__item" href={`/writing/${post.id}/`}>
+          <time class="post-list__date" datetime={isoDate(post.data.date)}>
+            {postDate(post.data.date)}
+          </time>
+          <span class="post-list__body">
+            <span class="post-list__title">
+              {post.data.title}
+              {post.data.draft && <span class="badge">Draft</span>}
+            </span>
+            <span class="post-list__desc">{post.data.description}</span>
+          </span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .post-list {
+    border-top: 1px solid var(--line);
+  }
+
+  .post-list__item {
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    gap: 0.25rem 1.5rem;
+    padding-block: 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .post-list__date {
+    padding-top: 0.2rem;
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+
+  .post-list__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .post-list__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition: color 0.15s ease;
+  }
+
+  .post-list__item:hover .post-list__title {
+    color: var(--teal-bright);
+  }
+
+  .post-list__desc {
+    color: var(--text-2);
+    font-size: 0.9375rem;
+  }
+
+  @media (max-width: 640px) {
+    .post-list__item {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

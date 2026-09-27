@@ -1,0 +1,420 @@
+---
+import Base from '../layouts/Base.astro';
+import Linked from '../components/Linked.astro';
+import { profile } from '../lib/profile';
+import { getProjects } from '../lib/content';
+import { monthYear, range } from '../lib/dates';
+
+const initiatives = (await getProjects()).filter((p) => p.data.resume);
+const site = (Astro.site ?? new URL('https://chriselkins.io')).hostname;
+const display = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+---
+
+<Base title="Résumé" description={`Résumé of ${profile.name}: ${profile.headline}`}>
+  <div class="container">
+    <article class="resume">
+      <header class="resume__head">
+        <div>
+          <h1>{profile.name}</h1>
+          <p class="resume__headline">{profile.headline}</p>
+          <ul role="list" class="resume__contact">
+            <li>{profile.location.city}, {profile.location.region}</li>
+            {profile.email && <li><a href={`mailto:${profile.email}`}>{profile.email}</a></li>}
+            <li><a href={`https://${site}/`}>{site}</a></li>
+            <li><a href={profile.links.linkedin}>{display(profile.links.linkedin)}</a></li>
+            <li><a href={profile.links.github}>{display(profile.links.github)}</a></li>
+          </ul>
+        </div>
+        <button class="button resume__print" type="button" id="print">Save as PDF</button>
+      </header>
+
+      <section class="resume__section">
+        <h2>Summary</h2>
+        <div>
+          <p><Linked text={profile.intro} /></p>
+        </div>
+      </section>
+
+      <section class="resume__section">
+        <h2>Experience</h2>
+        <div class="resume__items">
+          {
+            profile.roles.map((role) => (
+              <div class="resume__item">
+                <div class="resume__item-head">
+                  <h3>
+                    {role.title}, <a href={role.url} rel="noopener">{role.organization}</a>
+                  </h3>
+                  <p class="resume__when">{range(role.start, role.end)}</p>
+                </div>
+                <p class="resume__where">{role.location}</p>
+                <ul>
+                  {role.highlights.map((h) => (
+                    <li>{h}</li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          }
+          {
+            profile.earlier && (
+              <p class="resume__earlier">
+                <Linked text={profile.earlier} />
+              </p>
+            )
+          }
+        </div>
+      </section>
+
+      <section class="resume__section">
+        <h2>Certifications</h2>
+        <div class="resume__items">
+          {
+            profile.certifications.map((cert) => (
+              <div class="resume__item-head">
+                <h3>
+                  <Linked text={cert.name.includes(cert.abbreviation) ? cert.name : `${cert.name} (${cert.abbreviation})`} />{!cert.name.includes(cert.issuer) && `, ${cert.issuer}`}
+                </h3>
+                <p class="resume__when">
+                  {monthYear(cert.issued)}
+                  {cert.expires && ` – ${monthYear(cert.expires)}`}
+                </p>
+              </div>
+            ))
+          }
+          {
+            profile.links.credly && (
+              <p class="resume__also">
+                All badges: <a href={profile.links.credly} rel="noopener">{profile.links.credly.replace(/^https:\/\/(www\.)?/, '').replace(/\/badges\/credly$/, '')}</a>
+              </p>
+            )
+          }
+        </div>
+      </section>
+
+      <section class="resume__section">
+        <h2>Selected initiatives</h2>
+        <div>
+          <ul class="resume__projects">
+            {
+              initiatives.map((p) => (
+                <li>
+                  <strong>{p.data.title}.</strong> <Linked text={p.data.summary} />
+                </li>
+              ))
+            }
+          </ul>
+          {profile.alsoWorkedOn.length > 0 && <p class="resume__also">Also: {profile.alsoWorkedOn.join(', ')}.</p>}
+        </div>
+      </section>
+
+      <section class="resume__section">
+        <h2>Technical profile</h2>
+        <dl class="resume__stack">
+          {
+            profile.stack.map((group) => (
+              <div>
+                <dt>{group.label}</dt>
+                <dd>
+                  <Linked text={group.items.join(', ')} />
+                </dd>
+              </div>
+            ))
+          }
+        </dl>
+      </section>
+    </article>
+  </div>
+</Base>
+
+<script>
+  document.getElementById('print')?.addEventListener('click', () => window.print());
+</script>
+
+<style>
+  .resume {
+    max-width: 52rem;
+    margin-inline: auto;
+    padding-block: clamp(2.5rem, 6vw, 4rem) 2rem;
+    font-size: 1rem;
+  }
+
+  .resume__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .resume h1 {
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    letter-spacing: -0.035em;
+  }
+
+  .resume__headline {
+    margin-top: 0.375rem;
+    color: var(--text-2);
+    font-size: 1.125rem;
+  }
+
+  .resume__contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    margin-top: 1rem;
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+
+  .resume__contact a:hover {
+    color: var(--teal-bright);
+  }
+
+  .resume__section {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: 0.75rem 2rem;
+    padding-block: 1.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .resume__section h2 {
+    color: var(--teal);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding-top: 0.25rem;
+  }
+
+  .resume__section p,
+  .resume__section li,
+  .resume__section dd {
+    color: var(--text-2);
+  }
+
+  .resume__items {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .resume__item-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+  }
+
+  .resume h3 {
+    font-size: 1.0625rem;
+    letter-spacing: -0.01em;
+  }
+
+  .resume__when,
+  .resume__where {
+    color: var(--text-3) !important;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+
+  .resume__item ul,
+  .resume__projects {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-top: 0.625rem;
+    padding-left: 1.1rem;
+  }
+
+  .resume__projects {
+    margin-top: 0;
+  }
+
+  .resume__projects strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .resume__projects a,
+  .resume__section h3 a,
+  .resume__earlier a,
+  .resume__also a,
+  .resume__stack a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgb(79 209 193 / 0.45);
+    text-underline-offset: 0.2em;
+  }
+
+  .resume__also {
+    margin-top: 0.75rem;
+  }
+
+  .resume__stack div {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    gap: 1rem;
+    padding-block: 0.2rem;
+  }
+
+  .resume__stack dt {
+    color: var(--text-3);
+    font-size: 0.9375rem;
+  }
+
+  @media (max-width: 700px) {
+    .resume__section {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Print: black on white, no site chrome, one to two Letter/A4 pages. */
+  @media print {
+    @page {
+      margin: 12mm 15mm;
+    }
+
+    /* Beats :root { color-scheme: dark }, which would otherwise tint the page margins. */
+    :global(:root) {
+      color-scheme: light !important;
+      background: #fff !important;
+    }
+
+    :global(body) {
+      background: #fff !important;
+      color: #111 !important;
+    }
+
+    :global(.site-header),
+    :global(.site-footer),
+    :global(.skip-link),
+    .resume__print {
+      display: none !important;
+    }
+
+    .resume {
+      max-width: none;
+      padding: 0;
+      font-size: 9.5pt;
+      line-height: 1.38;
+    }
+
+    .resume h1 {
+      font-size: 22pt;
+    }
+
+    .resume__headline {
+      margin-top: 2pt;
+      font-size: 11.5pt;
+    }
+
+    .resume__contact {
+      margin-top: 6pt;
+      font-size: 8.5pt;
+    }
+
+    .resume__head {
+      padding-bottom: 8pt;
+    }
+
+    .resume__section {
+      grid-template-columns: 7.5rem minmax(0, 1fr);
+      gap: 4pt 14pt;
+      padding-block: 6.5pt;
+    }
+
+    .resume__section h2 {
+      font-size: 7.5pt;
+      padding-top: 1.5pt;
+    }
+
+    .resume h3 {
+      font-size: 10.5pt;
+    }
+
+    .resume__when,
+    .resume__where {
+      font-size: 8pt;
+    }
+
+    .resume__items {
+      gap: 6pt;
+    }
+
+    .resume__item ul,
+    .resume__projects {
+      gap: 1.5pt;
+      margin-top: 3pt;
+    }
+
+    .resume__earlier {
+      margin-top: 0;
+    }
+
+    /* One run-on paragraph: "Languages: Go, … · Web: Vue, …" */
+    .resume__stack,
+    .resume__stack div,
+    .resume__stack dt,
+    .resume__stack dd {
+      display: inline;
+    }
+
+    .resume__stack dt {
+      font-size: inherit;
+      font-weight: 600;
+    }
+
+    .resume__stack dt::after {
+      content: ': ';
+    }
+
+    .resume__stack div:not(:last-child)::after {
+      content: ' · ';
+      color: #999;
+    }
+
+    .resume h1,
+    .resume h3,
+    .resume__projects strong,
+    .resume__stack dt {
+      color: #111 !important;
+    }
+
+    .resume__headline,
+    .resume__section p,
+    .resume__section li,
+    .resume__section dd,
+    .resume__contact,
+    .resume__when,
+    .resume__where {
+      color: #333 !important;
+    }
+
+    .resume__section h2 {
+      color: #0f766e !important;
+    }
+
+    .resume__head,
+    .resume__section {
+      border-color: #ddd !important;
+    }
+
+    .resume__item,
+    .resume__projects li {
+      break-inside: avoid;
+    }
+
+    /* Links (company names) print as plain text in the surrounding color. */
+    .resume :global(a) {
+      color: inherit !important;
+      text-decoration: none !important;
+    }
+  }
+</style>

@@ -1,0 +1,80 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import Linked from './Linked.astro';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+const { project } = Astro.props;
+const { title, area, summary, stack, draft } = project.data;
+---
+
+<article class="card project-card">
+  <p class="eyebrow eyebrow--teal">
+    {area}
+    {draft && <span class="badge">Draft</span>}
+  </p>
+  <h3><a class="project-card__link" href={`/projects/#${project.id}`}>{title}</a></h3>
+  <p class="project-card__summary"><Linked text={summary} /></p>
+  <ul class="tags" aria-label="Stack">
+    {stack.map((item) => <li>{item}</li>)}
+  </ul>
+</article>
+
+<style>
+  .project-card {
+    gap: 0.75rem;
+    height: 100%;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .project-card:hover {
+    border-color: var(--line-strong);
+    background: var(--bg-hover);
+  }
+
+  .project-card .eyebrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    letter-spacing: -0.015em;
+  }
+
+  /* The title link covers the whole card; company links in the summary sit above it. */
+  .project-card__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .project-card__link:focus-visible {
+    outline: none;
+  }
+
+  .project-card:has(.project-card__link:focus-visible) {
+    outline: 2px solid var(--teal);
+    outline-offset: 3px;
+  }
+
+  .project-card__summary {
+    flex: 1;
+    color: var(--text-2);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  .project-card__summary :global(a) {
+    position: relative;
+    z-index: 1;
+  }
+
+  .tags {
+    margin-top: 0.5rem;
+  }
+</style>

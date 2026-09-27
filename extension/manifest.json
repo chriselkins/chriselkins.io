@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "Chris New Tab",
+  "version": "1.1",
+  "description": "Opens chriselkins.io/tools/ for new tabs.",
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  }
+}

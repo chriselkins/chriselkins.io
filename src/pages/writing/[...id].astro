@@ -1,0 +1,87 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import { getPosts, readingMinutes } from '../../lib/content';
+import { isoDate, postDate } from '../../lib/dates';
+import { articleJsonLd } from '../../lib/jsonld';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const { title, description, date, updated, tags, draft } = post.data;
+const site = Astro.site ?? new URL('https://chriselkins.io');
+const url = new URL(Astro.url.pathname, site).href;
+---
+
+<Base title={title} description={description} ogType="article">
+  <JsonLd slot="head" data={articleJsonLd(site, { title, description, date, updated, url })} />
+
+  <article>
+    <header class="page-head">
+      <div class="container narrow">
+        <p class="eyebrow post__meta">
+          <time datetime={isoDate(date)}>{postDate(date)}</time>
+          <span aria-hidden="true">·</span>
+          <span>{readingMinutes(post.body)} min read</span>
+          {draft && <span class="badge">Draft</span>}
+        </p>
+        <h1>{title}</h1>
+        <p class="lede">{description}</p>
+      </div>
+    </header>
+
+    <div class="container narrow">
+      <div class="prose">
+        <Content />
+      </div>
+
+      <footer class="post__footer">
+        {
+          updated && (
+            <p class="muted">
+              Updated <time datetime={isoDate(updated)}>{postDate(updated)}</time>
+            </p>
+          )
+        }
+        {
+          tags.length > 0 && (
+            <ul class="tags" aria-label="Tags">
+              {tags.map((tag) => (
+                <li>{tag}</li>
+              ))}
+            </ul>
+          )
+        }
+        <a class="arrow-link" href="/writing/"><span aria-hidden="true">←</span> All notes</a>
+      </footer>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .narrow {
+    max-width: calc(46rem + 2 * var(--gutter));
+  }
+
+  .post__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+
+  .post__footer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: 3.5rem;
+    padding-block: 2rem 1rem;
+    border-top: 1px solid var(--line);
+  }
+</style>

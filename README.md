@@ -1,2 +1,69 @@
 # chriselkins.io
-Personal website
+
+My personal site: a static [Astro](https://astro.build) site driven by one data file and a folder of Markdown.
+
+## Commands
+
+```sh
+npm install
+npm run dev       # http://localhost:4321, drafts visible
+npm run build     # static site in dist/, drafts left out
+npm run preview   # serve dist/ locally
+npm test          # unit tests for the tools page math
+npm run check     # type-check .astro and .ts files
+npm run images    # rebuild images (see below)
+npm run deploy    # build and publish to S3 + CloudFront
+```
+
+Node 22.12 or newer.
+
+## Content
+
+| What | Where |
+| --- | --- |
+| Name, headline, roles, What I do, How I work, stack, certification, About text, contact line | `src/data/profile.yaml` |
+| Selected initiatives | `src/content/projects/*.md` |
+| Writing | `src/content/writing/*.md` |
+
+`profile.yaml` feeds the home page, About, Work, Contact, the résumé at `/resume/`, and the JSON-LD structured data. It is validated at build time, so a typo fails the build instead of shipping. To publish an email address, uncomment `email:` in it.
+
+The first role in `profile.yaml` is my primary one (Speakeasy): it leads the hero, gets its own highlighted row with its logo, and is featured on the Work page, with the companies I own grouped after it. Any mention of a company from `roles` in page text becomes a link to its website automatically (`src/components/Linked.astro`).
+
+A new note is a Markdown file in `src/content/writing/`:
+
+```md
+---
+title: Changing large MySQL tables without taking the site down
+description: One or two sentences for the list page, RSS, and link previews.
+date: 2026-10-01
+tags: [MySQL, Operations]
+draft: true
+---
+```
+
+Drafts show up in `npm run dev` with a Draft badge and are left out of production builds, RSS, and the sitemap. Delete the `draft` line to publish.
+
+Projects work the same way: `featured: true` puts one on the home page (sorted by `order`; with an odd count the first spans the full row), and `resume: true` lists it under Selected initiatives on the résumé. Smaller supporting work goes in `alsoWorkedOn` in `profile.yaml`.
+
+## Tools
+
+`/tools/` is my start page: Central, Eastern, India, and UTC time plus Unix timestamps (type into any field or drag a slider), metric and imperial length conversion, and Google and DuckDuckGo search boxes that open results in a new tab. It is `noindex` and left out of the navigation and sitemap. The conversion logic is in `src/lib/time.ts` and `src/lib/length.ts`, with tests beside them.
+
+The Chrome extension that makes it my new tab page lives in `extension/`. Every build zips it to `/downloads/chris-new-tab.zip`, which the tools page links to. To install: unzip it, open `chrome://extensions`, turn on Developer mode, choose Load unpacked, and select the `chris-new-tab` folder. After changing the extension, bump `version` in `extension/manifest.json`.
+
+## Images
+
+Original photos go in `photos/`, which is git-ignored because originals can carry EXIF and GPS data. `npm run images` crops, resizes, and lightly corrects them with sharp, compresses each through the [EWWW.io API](https://docs.ewww.io/article/114-compress-api-reference) as a JPEG and a WebP, and writes metadata-free copies to `public/images/`. It also renders the link-preview card (`og.jpg`, using headless Chromium) and `apple-touch-icon.png`.
+
+It needs `EWWW_API_KEY` in `.env`, only builds files that are missing (so it doesn't spend credits twice), and `npm run images -- --force` rebuilds everything.
+
+## Hosting
+
+The site is served from a private S3 bucket through CloudFront at `https://chriselkins.io`, all defined in [`infra/site.yaml`](infra/site.yaml) (CloudFormation stack `chriselkins-io-site` in us-east-1):
+
+- ACM certificate for `chriselkins.io`, validated in Route 53
+- S3 bucket `chriselkins-io-site`: public access blocked, encrypted, versioned (old versions expire after 30 days), TLS-only
+- CloudFront, pay-as-you-go: Origin Access Control to the bucket, HTTPS only (TLS 1.2+), HTTP/2 and HTTP/3, IPv6, compression, the 404 page, a CloudFront Function that serves `/about/` from `about/index.html` and redirects `/about` to `/about/`, and a response headers policy with the Content-Security-Policy, HSTS, and other security headers
+- Route 53 A and AAAA alias records for the apex
+
+`npm run deploy` builds the site, uploads it with explicit content types and cache headers (hashed assets cached for a year, pages revalidated), removes files that are no longer in the build, and invalidates CloudFront. `npm run deploy:infra` applies changes to the stack after editing `infra/site.yaml`. Both use the default AWS CLI profile.
