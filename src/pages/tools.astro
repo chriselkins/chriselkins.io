@@ -38,11 +38,36 @@ const imperialTicks = [
 
 // Start the length converter at 1 meter so it renders filled in, even before JS runs.
 const initial = (unit: keyof typeof UNITS) => formatNumber(convert(1, 'm', unit));
+
+// Plex has no fixed address; the script fills it in once it has looked up the server's IP.
+const shortcuts = [
+  { label: 'Plex', id: 'plex-link' },
+  { label: 'ChatGPT', href: 'https://chatgpt.com' },
+  { label: 'YouTube', href: 'https://youtube.com/' },
+  { label: 'Gmail', href: 'https://gmail.com/' },
+  { label: 'Outlook', href: 'https://outlook.com/' },
+  { label: 'AWS Console', href: 'https://console.aws.amazon.com/' },
+  { label: 'AWS Speakeasy', href: 'https://774065755027.signin.aws.amazon.com/console' },
+];
 ---
 
-<Base title="Tools" description="Time zones, length conversions, and search." noindex>
+<Base title="Tools" description="Time zones, length conversions, and search." noindex hideHeader>
   <div class="container tools">
     <h1 class="visually-hidden">Tools</h1>
+
+    <nav aria-label="Shortcuts">
+      <ul role="list" class="shortcuts">
+        {
+          shortcuts.map((s) => (
+            <li>
+              <a class="button shortcut" id={s.id} href={s.href} target="_blank" rel="noopener noreferrer">
+                {s.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
 
     <section class="panel" aria-labelledby="tz-title">
       <div class="panel__head">
@@ -172,7 +197,7 @@ const initial = (unit: keyof typeof UNITS) => formatNumber(convert(1, 'm', unit)
     <section class="search" aria-label="Web search">
       <form class="search__form" action="https://www.google.com/search" method="get" target="_blank" rel="noopener noreferrer" role="search">
         <label class="search__engine" for="q-google">Google</label>
-        <input class="search__input" id="q-google" name="q" type="search" placeholder="Search" enterkeyhint="search" required />
+        <input class="search__input" id="q-google" name="q" type="search" placeholder="Search" enterkeyhint="search" required autofocus />
         <button class="search__go" type="submit" aria-label="Search Google in a new tab">
           <span aria-hidden="true">↗</span>
         </button>
@@ -222,8 +247,21 @@ const initial = (unit: keyof typeof UNITS) => formatNumber(convert(1, 'm', unit)
     toMicrometers,
     type Unit,
   } from '../lib/length';
+  import { PLEX_HOST, lookupPlexUrl } from '../lib/plex';
+  import { urlFromQuery } from '../lib/search';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  /* ---------- Shortcuts ---------- */
+
+  // Plex follows my home IP, so its address is looked up fresh each time the page opens.
+  const plexLink = $<HTMLAnchorElement>('plex-link');
+  lookupPlexUrl()
+    .catch(() => null)
+    .then((url) => {
+      if (url) plexLink.href = url;
+      else plexLink.title = `Couldn't look up ${PLEX_HOST}`;
+    });
 
   /* ---------- Time zones ---------- */
 
@@ -372,6 +410,17 @@ const initial = (unit: keyof typeof UNITS) => formatNumber(convert(1, 'm', unit)
   });
 
   renderLength();
+
+  /* ---------- Search ---------- */
+
+  // A URL or domain in the Google box opens that site in a new tab instead of searching for it.
+  const googleInput = $<HTMLInputElement>('q-google');
+  googleInput.form!.addEventListener('submit', (e) => {
+    const url = urlFromQuery(googleInput.value);
+    if (!url) return;
+    e.preventDefault();
+    Object.assign(document.createElement('a'), { href: url, target: '_blank', rel: 'noopener noreferrer' }).click();
+  });
 </script>
 
 <style>
@@ -379,7 +428,25 @@ const initial = (unit: keyof typeof UNITS) => formatNumber(convert(1, 'm', unit)
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    padding-block: 0.25rem 1.5rem;
+    padding-block: 1.5rem;
+  }
+
+  /* Shortcuts */
+  .shortcuts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Plex, until its address has been looked up. */
+  .shortcut:not([href]) {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .shortcut:not([href]):hover {
+    border-color: var(--line-strong);
+    color: var(--text);
   }
 
   /* Panels */

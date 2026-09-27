@@ -162,10 +162,11 @@ Resources:
         Comment: !Sub 'Security headers for ${DomainName}'
         SecurityHeadersConfig:
           # style-src needs 'unsafe-inline' for syntax-highlighting colors in code blocks; scripts stay 'self' only.
+          # connect-src allows Cloudflare's DNS over HTTPS, which /tools/ uses to find my Plex server's IP.
           ContentSecurityPolicy:
             ContentSecurityPolicy: >-
               default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-              img-src 'self'; font-src 'self'; connect-src 'self';
+              img-src 'self'; font-src 'self'; connect-src 'self' https://cloudflare-dns.com;
               form-action https://www.google.com https://duckduckgo.com;
               frame-ancestors 'none'; base-uri 'self'; object-src 'none';
               upgrade-insecure-requests

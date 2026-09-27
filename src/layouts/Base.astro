@@ -13,10 +13,12 @@ interface Props {
   description?: string;
   /** Keeps the page out of search engines (used for /tools/). */
   noindex?: boolean;
+  /** Leaves out the site header (used for /tools/, my start page). */
+  hideHeader?: boolean;
   ogType?: 'website' | 'article';
 }
 
-const { title, description = profile.description, noindex = false, ogType = 'website' } = Astro.props;
+const { title, description = profile.description, noindex = false, hideHeader = false, ogType = 'website' } = Astro.props;
 const fullTitle = title ? `${title} · ${profile.name}` : `${profile.name} · ${profile.headline}`;
 const site = Astro.site ?? new URL('https://chriselkins.io');
 const canonical = new URL(Astro.url.pathname, site).href;
@@ -56,7 +58,7 @@ const ogImage = new URL('/images/og.jpg', site).href;
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
-    <Header />
+    {!hideHeader && <Header />}
     <main id="main">
       <slot />
     </main>
