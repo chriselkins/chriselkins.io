@@ -15,10 +15,19 @@ interface Props {
   noindex?: boolean;
   /** Leaves out the site header (used for /tools/, my start page). */
   hideHeader?: boolean;
+  /** Leaves out the site footer (used for /tools/). */
+  hideFooter?: boolean;
   ogType?: 'website' | 'article';
 }
 
-const { title, description = profile.description, noindex = false, hideHeader = false, ogType = 'website' } = Astro.props;
+const {
+  title,
+  description = profile.description,
+  noindex = false,
+  hideHeader = false,
+  hideFooter = false,
+  ogType = 'website',
+} = Astro.props;
 const fullTitle = title ? `${title} · ${profile.name}` : `${profile.name} · ${profile.headline}`;
 const site = Astro.site ?? new URL('https://chriselkins.io');
 const canonical = new URL(Astro.url.pathname, site).href;
@@ -62,6 +71,6 @@ const ogImage = new URL('/images/og.jpg', site).href;
     <main id="main">
       <slot />
     </main>
-    <Footer />
+    {!hideFooter && <Footer />}
   </body>
 </html>
