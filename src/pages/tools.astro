@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { IMPERIAL, METRIC, SLIDER_MAX_LOG, SLIDER_MIN_LOG, SLIDER_STEPS, UNITS, convert, formatNumber, metersToSlider } from '../lib/length';
+import { formatTemperature, toFahrenheit } from '../lib/temperature';
 
 const zones = [
   { id: 'central', label: 'Central', tz: 'America/Chicago' },
@@ -39,6 +40,9 @@ const imperialTicks = [
 // Start the length converter at 1 meter so it renders filled in, even before JS runs.
 const initial = (unit: keyof typeof UNITS) => formatNumber(convert(1, 'm', unit));
 
+// The temperature converter starts at room temperature.
+const START_CELSIUS = 20;
+
 // Plex has no fixed address; the script fills it in once it has looked up the server's IP.
 const shortcuts = [
   { label: 'Plex', id: 'plex-link' },
@@ -55,19 +59,42 @@ const shortcuts = [
   <div class="container tools">
     <h1 class="visually-hidden">Tools</h1>
 
-    <nav aria-label="Shortcuts">
-      <ul role="list" class="shortcuts">
-        {
-          shortcuts.map((s) => (
-            <li>
-              <a class="button shortcut" id={s.id} href={s.href} target="_blank" rel="noopener noreferrer">
-                {s.label}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </nav>
+    <div class="topbar">
+      <nav aria-label="Shortcuts">
+        <ul role="list" class="shortcuts">
+          {
+            shortcuts.map((s) => (
+              <li>
+                <a class="button shortcut" id={s.id} href={s.href} target="_blank" rel="noopener noreferrer">
+                  {s.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="temp" role="group" aria-label="Temperature">
+        <label class="unit__box">
+          <span class="visually-hidden">Celsius</span>
+          <input class="unit__input" id="temp-c" type="text" autocomplete="off" spellcheck="false" value={START_CELSIUS} />
+          <span class="unit__suffix" aria-hidden="true">°C</span>
+        </label>
+        <span class="temp__equals" aria-hidden="true">=</span>
+        <label class="unit__box">
+          <span class="visually-hidden">Fahrenheit</span>
+          <input
+            class="unit__input"
+            id="temp-f"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            value={formatTemperature(toFahrenheit(START_CELSIUS))}
+          />
+          <span class="unit__suffix" aria-hidden="true">°F</span>
+        </label>
+      </div>
+    </div>
 
     <section class="panel" aria-labelledby="tz-title">
       <div class="panel__head">
@@ -249,6 +276,7 @@ const shortcuts = [
   } from '../lib/length';
   import { PLEX_HOST, lookupPlexUrl } from '../lib/plex';
   import { urlFromQuery } from '../lib/search';
+  import { formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -262,6 +290,40 @@ const shortcuts = [
       if (url) plexLink.href = url;
       else plexLink.title = `Couldn't look up ${PLEX_HOST}`;
     });
+
+  /* ---------- Temperature ---------- */
+
+  const celsiusInput = $<HTMLInputElement>('temp-c');
+  const fahrenheitInput = $<HTMLInputElement>('temp-f');
+  let celsius = parseNumber(celsiusInput.value);
+
+  /** Redraws both fields except the one being typed in. */
+  function renderTemperature(source?: Element) {
+    const shown: [HTMLInputElement, number][] = [
+      [celsiusInput, celsius],
+      [fahrenheitInput, toFahrenheit(celsius)],
+    ];
+    for (const [input, degrees] of shown) {
+      if (input === source) continue;
+      input.value = formatTemperature(degrees);
+      input.removeAttribute('aria-invalid');
+    }
+  }
+
+  for (const [input, fromInput] of [
+    [celsiusInput, (degrees: number) => degrees],
+    [fahrenheitInput, toCelsius],
+  ] as const) {
+    input.addEventListener('input', () => {
+      if (!input.value.trim()) return input.removeAttribute('aria-invalid');
+      const degrees = parseNumber(input.value);
+      if (Number.isNaN(degrees)) return input.setAttribute('aria-invalid', 'true');
+      input.removeAttribute('aria-invalid');
+      celsius = fromInput(degrees);
+      renderTemperature(input);
+    });
+    input.addEventListener('blur', () => renderTemperature());
+  }
 
   /* ---------- Time zones ---------- */
 
@@ -431,7 +493,29 @@ const shortcuts = [
     padding-block: 1.5rem;
   }
 
-  /* Shortcuts */
+  /* Shortcuts, with the temperature converter at the right end of the row */
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+  }
+
+  .temp {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .temp .unit__box {
+    width: 7.5rem;
+  }
+
+  .temp__equals {
+    color: var(--text-3);
+  }
+
   .shortcuts {
     display: flex;
     flex-wrap: wrap;
