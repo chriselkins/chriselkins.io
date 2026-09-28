@@ -1,4 +1,6 @@
 ---
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import Base from '../layouts/Base.astro';
 import { IMPERIAL, METRIC, SLIDER_MAX_LOG, SLIDER_MIN_LOG, SLIDER_STEPS, UNITS, convert, formatNumber, metersToSlider } from '../lib/length';
 import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
@@ -87,6 +89,10 @@ const assistants = [
   { id: 'higgsfield-image', label: 'Higgsfield Image', url: 'https://higgsfield.ai/ai/image?prompt=', placeholder: 'Describe an image' },
   { id: 'higgsfield-video', label: 'Higgsfield Video', url: 'https://higgsfield.ai/ai/video?prompt=', placeholder: 'Describe a video' },
 ];
+
+// The Safari extension is signed and notarized on my Mac (npm run safari), so its link only shows
+// once that zip is committed.
+const hasSafari = existsSync(path.join(process.cwd(), 'public/downloads/chris-new-tab-safari.zip'));
 
 // Links along the top, beside the Conversions button.
 const toolLinks = [
@@ -226,6 +232,18 @@ const toolLinks = [
         <code>chris-new-tab</code> folder.
       </span>
     </p>
+
+    {hasSafari && (
+      <p class="extension">
+        <a class="extension__link" href="/downloads/chris-new-tab-safari.zip" download>
+          Safari new tab extension <span aria-hidden="true">↓</span>
+        </a>
+        <span>
+          Move Chris New Tab to Applications and open it once. In Safari Settings, turn it on under Extensions, allow it
+          on gemini.google.com, and choose it under General for new windows and tabs. Needs Safari 18.4 or later.
+        </span>
+      </p>
+    )}
 
     <dialog class="conversions" id="conversions" aria-labelledby="conversions-title">
       <div class="conversions__body">

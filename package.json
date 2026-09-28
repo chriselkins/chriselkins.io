@@ -15,6 +15,7 @@
     "images": "node --env-file=.env scripts/optimize-images.mjs",
     "deploy": "bash scripts/deploy.sh",
     "deploy:infra": "aws cloudformation deploy --region us-east-1 --stack-name chriselkins-io-site --template-file infra/site.yaml --tags Project=chriselkins.io --no-fail-on-empty-changeset",
+    "safari": "bash scripts/safari.sh",
     "astro": "astro"
   },
   "allowScripts": {
