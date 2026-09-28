@@ -19,6 +19,8 @@ const zones = [
 const allZones = [
   { id: 'honolulu', label: 'Honolulu', tz: 'Pacific/Honolulu' },
   { id: 'pacific', label: 'Pacific', tz: 'America/Los_Angeles' },
+  // Baja California Sur keeps UTC-7 all year, so it matches Mountain in winter and Pacific in summer.
+  { id: 'san-jose-del-cabo', label: 'San José del Cabo', tz: 'America/Mazatlan' },
   { id: 'mountain', label: 'Mountain', tz: 'America/Denver' },
   { id: 'mexico-city', label: 'Mexico City', tz: 'America/Mexico_City' },
   { id: 'central', label: 'Central', tz: 'America/Chicago' },
@@ -26,6 +28,7 @@ const allZones = [
   { id: 'sao-paulo', label: 'São Paulo', tz: 'America/Sao_Paulo' },
   { id: 'utc', label: 'UTC', tz: 'UTC' },
   { id: 'london', label: 'London', tz: 'Europe/London' },
+  { id: 'madrid', label: 'Madrid', tz: 'Europe/Madrid' },
   { id: 'paris', label: 'Paris', tz: 'Europe/Paris' },
   { id: 'johannesburg', label: 'Johannesburg', tz: 'Africa/Johannesburg' },
   { id: 'istanbul', label: 'Istanbul', tz: 'Europe/Istanbul' },
