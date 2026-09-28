@@ -37,3 +37,12 @@ export function urlFromQuery(query: string): string | null {
     labels.length > 1 && labels.every((label) => /^[a-z0-9-]+$/.test(label)) && TLDS.has(labels[labels.length - 1]);
   return isDomain ? bare.href : null;
 }
+
+/**
+ * The suggestions in a reply from Google's or DuckDuckGo's suggestion service, which both look like
+ * ["what I typed", ["suggestion", ...], ...]. Anything else has none.
+ */
+export function parseSuggestions(data: unknown): string[] {
+  const suggestions = Array.isArray(data) ? data[1] : undefined;
+  return Array.isArray(suggestions) ? suggestions.filter((s): s is string => typeof s === 'string') : [];
+}

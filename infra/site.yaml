@@ -154,6 +154,54 @@ Resources:
           };
         }
 
+  # Search suggestions for the tools page's search boxes. Google and DuckDuckGo don't let other sites
+  # read their suggestions, so the page gets them from /tools/suggest/ on this domain, which keeps the
+  # CSP at connect-src 'self'. Only q passes through, onto a fixed path and query: Google answers a
+  # callback= parameter with JSONP, and passing one along would let a script tag run code from this
+  # domain, getting around script-src 'self'.
+  SuggestFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${AWS::StackName}-suggest'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Send /tools/suggest/ requests to the search engine with a fixed query plus q
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        var UPSTREAM = {
+          '/tools/suggest/google': { uri: '/complete/search', query: 'client=firefox' },
+          '/tools/suggest/youtube': { uri: '/complete/search', query: 'client=firefox&ds=yt' },
+          '/tools/suggest/duckduckgo': { uri: '/ac/', query: 'type=list' }
+        };
+
+        function handler(event) {
+          var request = event.request;
+          var upstream = UPSTREAM[request.uri];
+          var q = request.querystring.q;
+          // q must be percent-encoded (encodeURIComponent's characters), so it can't add a parameter.
+          if (!upstream || !q || !/^[\w.!~*'()%-]+$/.test(q.value)) {
+            return { statusCode: 400, statusDescription: 'Bad Request' };
+          }
+          request.uri = upstream.uri;
+          request.querystring = upstream.query + '&q=' + q.value;
+          return request;
+        }
+
+  # Sends the search engines only the query string SuggestFunction builds: no viewer headers or cookies.
+  SuggestOriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub '${AWS::StackName}-suggest'
+        Comment: Search suggestion query strings only
+        HeadersConfig:
+          HeaderBehavior: none
+        CookiesConfig:
+          CookieBehavior: none
+        QueryStringsConfig:
+          QueryStringBehavior: whitelist
+          QueryStrings: [client, ds, type, q]
+
   SecurityHeadersPolicy:
     Type: AWS::CloudFront::ResponseHeadersPolicy
     Properties:
@@ -265,6 +313,17 @@ Resources:
             OriginAccessControlId: !GetAtt OriginAccessControl.Id
             S3OriginConfig:
               OriginAccessIdentity: ''
+          # Search suggestions for /tools/ (see SuggestFunction).
+          - Id: google-suggest
+            DomainName: suggestqueries.google.com
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+          - Id: duckduckgo-suggest
+            DomainName: duckduckgo.com
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
         DefaultCacheBehavior:
           TargetOriginId: s3-site
           ViewerProtocolPolicy: redirect-to-https
@@ -277,9 +336,44 @@ Resources:
           FunctionAssociations:
             - EventType: viewer-request
               FunctionARN: !GetAtt DirectoryIndexFunction.FunctionMetadata.FunctionARN
-        # Same as the default, but with NoIndexHeadersPolicy. /tools (no slash) still takes the default
-        # behavior, which only redirects it to /tools/.
         CacheBehaviors:
+          # Search suggestions for /tools/ (see SuggestFunction), never cached. CloudFront takes the first
+          # pattern that matches, so these come before /tools/*.
+          - PathPattern: /tools/suggest/google
+            TargetOriginId: google-suggest
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
+            OriginRequestPolicyId: !Ref SuggestOriginRequestPolicy
+            ResponseHeadersPolicyId: !Ref NoIndexHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt SuggestFunction.FunctionMetadata.FunctionARN
+          - PathPattern: /tools/suggest/youtube
+            TargetOriginId: google-suggest
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
+            OriginRequestPolicyId: !Ref SuggestOriginRequestPolicy
+            ResponseHeadersPolicyId: !Ref NoIndexHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt SuggestFunction.FunctionMetadata.FunctionARN
+          - PathPattern: /tools/suggest/duckduckgo
+            TargetOriginId: duckduckgo-suggest
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
+            OriginRequestPolicyId: !Ref SuggestOriginRequestPolicy
+            ResponseHeadersPolicyId: !Ref NoIndexHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt SuggestFunction.FunctionMetadata.FunctionARN
+          # Same as the default, but with NoIndexHeadersPolicy. /tools (no slash) still takes the default
+          # behavior, which only redirects it to /tools/.
           - PathPattern: /tools/*
             TargetOriginId: s3-site
             ViewerProtocolPolicy: redirect-to-https

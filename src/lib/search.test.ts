@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { urlFromQuery } from './search';
+import { parseSuggestions, urlFromQuery } from './search';
 
 describe('urlFromQuery', () => {
   it('opens full http and https URLs as typed', () => {
@@ -59,6 +59,20 @@ describe('urlFromQuery', () => {
       'ftp://example.com',
     ]) {
       expect(urlFromQuery(query), query).toBeNull();
+    }
+  });
+});
+
+describe('parseSuggestions', () => {
+  it('reads the suggestions from Google and DuckDuckGo replies', () => {
+    const google = ['weather', ['weather radar', 'weather today'], [], { 'google:suggestsubtypes': [[512], [512, 433]] }];
+    expect(parseSuggestions(google)).toEqual(['weather radar', 'weather today']);
+    expect(parseSuggestions(['café', ['café du monde', 'café bustelo']])).toEqual(['café du monde', 'café bustelo']);
+  });
+
+  it('finds none in anything else', () => {
+    for (const data of [[], ['weather'], ['weather', 'radar'], {}, null, 'weather', [null, [1, null, {}]]]) {
+      expect(parseSuggestions(data), JSON.stringify(data)).toEqual([]);
     }
   });
 });
