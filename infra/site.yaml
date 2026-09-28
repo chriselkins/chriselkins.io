@@ -199,6 +199,54 @@ Resources:
             - Header: x-amz-server-side-encryption
             - Header: x-amz-version-id
 
+  # /tools/ (my start page) and /downloads/ (its extension): the same headers, plus noindex, and no
+  # referrer on anything the start page opens or fetches. CloudFormation doesn't allow YAML aliases,
+  # so this repeats SecurityHeadersPolicy; infra/site.test.ts fails if the two drift apart.
+  NoIndexHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${AWS::StackName}-noindex-headers'
+        Comment: !Sub 'Security headers plus noindex and no-referrer for ${DomainName}/tools/ and /downloads/'
+        SecurityHeadersConfig:
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: >-
+              default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+              img-src 'self'; font-src 'self'; connect-src 'self' https://cloudflare-dns.com;
+              form-action https://www.google.com https://duckduckgo.com;
+              frame-ancestors 'none'; base-uri 'self'; object-src 'none';
+              upgrade-insecure-requests
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: no-referrer
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 63072000
+            IncludeSubdomains: true
+            Preload: true
+            Override: true
+        CustomHeadersConfig:
+          Items:
+            - Header: Permissions-Policy
+              Value: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+              Override: true
+            - Header: Cross-Origin-Opener-Policy
+              Value: same-origin
+              Override: true
+            - Header: X-Robots-Tag
+              Value: noindex, nofollow
+              Override: true
+        RemoveHeadersConfig:
+          Items:
+            - Header: Server
+            - Header: x-amz-server-side-encryption
+            - Header: x-amz-version-id
+
   Distribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -229,6 +277,31 @@ Resources:
           FunctionAssociations:
             - EventType: viewer-request
               FunctionARN: !GetAtt DirectoryIndexFunction.FunctionMetadata.FunctionARN
+        # Same as the default, but with NoIndexHeadersPolicy. /tools (no slash) still takes the default
+        # behavior, which only redirects it to /tools/.
+        CacheBehaviors:
+          - PathPattern: /tools/*
+            TargetOriginId: s3-site
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            ResponseHeadersPolicyId: !Ref NoIndexHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt DirectoryIndexFunction.FunctionMetadata.FunctionARN
+          - PathPattern: /downloads/*
+            TargetOriginId: s3-site
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            ResponseHeadersPolicyId: !Ref NoIndexHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt DirectoryIndexFunction.FunctionMetadata.FunctionARN
         CustomErrorResponses:
           - ErrorCode: 404
             ResponseCode: 404
