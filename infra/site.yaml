@@ -385,13 +385,14 @@ Resources:
             FunctionAssociations:
               - EventType: viewer-request
                 FunctionARN: !GetAtt DirectoryIndexFunction.FunctionMetadata.FunctionARN
+          # The extension zips, never cached, so a change to the extension can be downloaded as soon as
+          # it's deployed.
           - PathPattern: /downloads/*
             TargetOriginId: s3-site
             ViewerProtocolPolicy: redirect-to-https
             AllowedMethods: [GET, HEAD]
             CachedMethods: [GET, HEAD]
-            Compress: true
-            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
             ResponseHeadersPolicyId: !Ref NoIndexHeadersPolicy
             FunctionAssociations:
               - EventType: viewer-request

@@ -32,9 +32,13 @@ fi
 
 # Content-hashed build output can be cached forever. Pages are cached at the
 # edge until the next deploy invalidates them, and browsers always revalidate.
+# The extension downloads aren't cached anywhere (CloudFront's /downloads/*
+# behavior doesn't cache either), so a change to the extension can be
+# downloaded as soon as it's published.
 IMMUTABLE='public, max-age=31536000, immutable'
 MEDIA='public, max-age=604800'
 PAGE='public, max-age=0, s-maxage=86400, must-revalidate'
+DOWNLOAD='no-store'
 
 put() {
   aws s3 cp "$DIST" "s3://$BUCKET" --recursive --only-show-errors \
@@ -52,7 +56,7 @@ put '*.html' 'text/html; charset=utf-8' "$PAGE"
 put 'rss.xml' 'application/rss+xml; charset=utf-8' "$PAGE"
 put 'sitemap*.xml' 'application/xml; charset=utf-8' "$PAGE"
 put 'robots.txt' 'text/plain; charset=utf-8' "$PAGE"
-put 'downloads/*.zip' 'application/zip' "$PAGE"
+put 'downloads/*.zip' 'application/zip' "$DOWNLOAD"
 # Plain text, so the public keys open in a browser and pipe cleanly from curl.
 put 'pgp.asc' 'text/plain; charset=utf-8' "$PAGE"
 put 'ssh.pub' 'text/plain; charset=utf-8' "$PAGE"
