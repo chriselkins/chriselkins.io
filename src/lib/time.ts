@@ -13,23 +13,27 @@ export interface WallTime {
 
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
-function partsFormatter(timeZone: string): Intl.DateTimeFormat {
-  let f = formatters.get(timeZone);
+/** Makes each en-US formatter once. Making them is the slow part, and the tools page redraws every zone each second. */
+function formatter(timeZone: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${timeZone} ${JSON.stringify(options)}`;
+  let f = formatters.get(key);
   if (!f) {
-    f = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      hourCycle: 'h23',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    formatters.set(timeZone, f);
+    f = new Intl.DateTimeFormat('en-US', { timeZone, ...options });
+    formatters.set(key, f);
   }
   return f;
 }
+
+const partsFormatter = (timeZone: string) =>
+  formatter(timeZone, {
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 
 export function wallTime(instant: number, timeZone: string): WallTime {
   const out: Record<string, number> = {};
@@ -89,19 +93,23 @@ export function formatOffset(minutes: number): string {
   return `UTC${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
 }
 
-/** CDT/CST, EDT/EST from Intl; zones without a US abbreviation pass one in. */
+/**
+ * CDT/CST, EDT/EST from Intl; zones without a US abbreviation pass one in. Empty where Intl only has an
+ * offset like GMT+9, which the offset shown beside it already says.
+ */
 export function zoneAbbreviation(instant: number, timeZone: string, fixed?: string): string {
   if (fixed) return fixed;
-  const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' })
+  const part = formatter(timeZone, { timeZoneName: 'short' })
     .formatToParts(new Date(instant))
     .find((p) => p.type === 'timeZoneName');
-  return part?.value ?? '';
+  const name = part?.value ?? '';
+  return /^GMT[+-]/.test(name) ? '' : name;
 }
 
 /** Sat, Sep 26 · 2:30 PM */
 export function friendlyTime(instant: number, timeZone: string): string {
-  const date = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' });
-  const time = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' });
+  const date = formatter(timeZone, { weekday: 'short', month: 'short', day: 'numeric' });
+  const time = formatter(timeZone, { hour: 'numeric', minute: '2-digit' });
   const d = new Date(instant);
   return `${date.format(d)} · ${time.format(d)}`;
 }

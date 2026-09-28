@@ -54,6 +54,15 @@ describe('offsets', () => {
     expect(zoneAbbreviation(Date.UTC(2026, 10, 1, 7, 59), DEN)).toBe('MDT');
     expect(zoneAbbreviation(Date.UTC(2026, 10, 1, 8, 0), DEN)).toBe('MST');
   });
+
+  it('leaves out abbreviations that are only an offset', () => {
+    // Intl calls Tokyo "GMT+9", and London "GMT" in winter but "GMT+1" in summer.
+    expect(zoneAbbreviation(NOW, 'Asia/Tokyo')).toBe('');
+    expect(zoneAbbreviation(Date.UTC(2026, 0, 15, 12), 'Europe/London')).toBe('GMT');
+    expect(zoneAbbreviation(NOW, 'Europe/London')).toBe('');
+    expect(zoneAbbreviation(NOW, 'Pacific/Honolulu')).toBe('HST');
+    expect(zoneAbbreviation(NOW, UTC)).toBe('UTC');
+  });
 });
 
 describe('wall time', () => {

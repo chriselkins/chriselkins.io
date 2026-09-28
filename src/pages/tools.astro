@@ -15,6 +15,29 @@ const zones = [
   { id: 'utc', label: 'UTC', tz: 'UTC' },
 ];
 
+// The All zones dialog: the card's zones plus major cities around the world, west to east.
+const allZones = [
+  { id: 'honolulu', label: 'Honolulu', tz: 'Pacific/Honolulu' },
+  { id: 'pacific', label: 'Pacific', tz: 'America/Los_Angeles' },
+  { id: 'mountain', label: 'Mountain', tz: 'America/Denver' },
+  { id: 'mexico-city', label: 'Mexico City', tz: 'America/Mexico_City' },
+  { id: 'central', label: 'Central', tz: 'America/Chicago' },
+  { id: 'eastern', label: 'Eastern', tz: 'America/New_York' },
+  { id: 'sao-paulo', label: 'São Paulo', tz: 'America/Sao_Paulo' },
+  { id: 'utc', label: 'UTC', tz: 'UTC' },
+  { id: 'london', label: 'London', tz: 'Europe/London' },
+  { id: 'paris', label: 'Paris', tz: 'Europe/Paris' },
+  { id: 'johannesburg', label: 'Johannesburg', tz: 'Africa/Johannesburg' },
+  { id: 'istanbul', label: 'Istanbul', tz: 'Europe/Istanbul' },
+  { id: 'dubai', label: 'Dubai', tz: 'Asia/Dubai' },
+  { id: 'india', label: 'India', tz: 'Asia/Kolkata', abbr: 'IST' },
+  { id: 'bangkok', label: 'Bangkok', tz: 'Asia/Bangkok' },
+  { id: 'singapore', label: 'Singapore', tz: 'Asia/Singapore' },
+  { id: 'tokyo', label: 'Tokyo', tz: 'Asia/Tokyo' },
+  { id: 'sydney', label: 'Sydney', tz: 'Australia/Sydney' },
+  { id: 'auckland', label: 'Auckland', tz: 'Pacific/Auckland' },
+];
+
 // Sliders run 00:00 to 23:55 in 5-minute steps.
 const SLIDER_MAX_MINUTES = 1435;
 const hourTicks = [0, 3, 6, 9, 12, 15, 18, 21].map((h) => ({
@@ -120,9 +143,10 @@ const toolLinks = [
       <div class="panel__head">
         <h2 class="panel__title" id="tz-title">Time zones</h2>
         <div class="panel__actions">
-          <span class="clock" id="tz-clock" aria-live="polite"></span>
-          <span class="live" id="tz-live"><span class="live__dot" aria-hidden="true"></span>Live</span>
-          <button class="button button--small" id="tz-now" type="button">Now</button>
+          <span class="clock" aria-live="polite" data-clock></span>
+          <span class="live" data-live><span class="live__dot" aria-hidden="true"></span>Live</span>
+          <button class="button button--small" type="button" data-now>Now</button>
+          <button class="button button--small" type="button" id="zones-open" aria-haspopup="dialog">All zones</button>
         </div>
         <p class="panel__hint" id="tz-hint">
           Type into any field (<kbd>3pm</kbd>, <kbd>9/27 9:30am</kbd>, <kbd>2026-09-26 14:30</kbd>) or drag a slider.
@@ -164,7 +188,7 @@ const toolLinks = [
             {hourTicks.map((t) => <span style={`--x: ${t.x}%`}>{t.label}</span>)}
           </div>
         </div>
-        <div class="tz__row tz__row--unix">
+        <div class="tz__row tz__row--unix" data-unix>
           <div class="tz__label">
             <label for="tz-unix">Unix</label>
             <span class="tz__meta">seconds or ms</span>
@@ -176,11 +200,82 @@ const toolLinks = [
             inputmode="numeric"
             autocomplete="off"
             spellcheck="false"
+            data-input
           />
-          <span class="tz__friendly tz__unix-detail" id="tz-unix-detail"></span>
+          <span class="tz__friendly tz__unix-detail" data-detail></span>
         </div>
       </div>
     </section>
+
+    <dialog class="dialog" id="zones" aria-labelledby="zones-title">
+      <div class="dialog__body">
+        <div class="panel__head">
+          <h2 class="dialog__title" id="zones-title">All time zones</h2>
+          <div class="panel__actions">
+            <span class="clock" aria-live="polite" data-clock></span>
+            <span class="live" data-live><span class="live__dot" aria-hidden="true"></span>Live</span>
+            <button class="button button--small" type="button" data-now>Now</button>
+            <button class="button button--small" type="button" id="zones-close">Close</button>
+          </div>
+          <p class="panel__hint" id="zones-hint">
+            Type into any field (<kbd>3pm</kbd>, <kbd>9/27 9:30am</kbd>, <kbd>2026-09-26 14:30</kbd>) or drag a slider.
+          </p>
+        </div>
+
+        <div class="tz">
+          {
+            allZones.map((z) => (
+              <div class="tz__row" data-zone={z.tz} data-abbr={z.abbr}>
+                <div class="tz__label">
+                  <label for={`zones-${z.id}`}>{z.label}</label>
+                  <span class="tz__meta" data-meta></span>
+                </div>
+                <input
+                  class="field tz__input"
+                  id={`zones-${z.id}`}
+                  type="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-describedby="zones-hint"
+                  data-input
+                />
+                <span class="tz__friendly" data-friendly></span>
+                <input
+                  class="tz__slider"
+                  type="range"
+                  min="0"
+                  max={SLIDER_MAX_MINUTES}
+                  step="5"
+                  aria-label={`${z.label} time of day`}
+                  data-slider
+                />
+              </div>
+            ))
+          }
+          <div class="tz__row tz__row--ticks" aria-hidden="true">
+            <div class="ticks tz__ticks">
+              {hourTicks.map((t) => <span style={`--x: ${t.x}%`}>{t.label}</span>)}
+            </div>
+          </div>
+          <div class="tz__row tz__row--unix" data-unix>
+            <div class="tz__label">
+              <label for="zones-unix">Unix</label>
+              <span class="tz__meta">seconds or ms</span>
+            </div>
+            <input
+              class="field tz__input"
+              id="zones-unix"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              spellcheck="false"
+              data-input
+            />
+            <span class="tz__friendly tz__unix-detail" data-detail></span>
+          </div>
+        </div>
+      </div>
+    </dialog>
 
     <section class="ask" aria-label="Ask an assistant">
       {
@@ -252,10 +347,10 @@ const toolLinks = [
       </p>
     )}
 
-    <dialog class="conversions" id="conversions" aria-labelledby="conversions-title">
-      <div class="conversions__body">
-        <div class="conversions__head">
-          <h2 class="conversions__title" id="conversions-title">Conversions</h2>
+    <dialog class="dialog" id="conversions" aria-labelledby="conversions-title">
+      <div class="dialog__body">
+        <div class="dialog__head">
+          <h2 class="dialog__title" id="conversions-title">Conversions</h2>
           <button class="button button--small" type="button" id="conversions-close">Close</button>
         </div>
 
@@ -471,18 +566,23 @@ const toolLinks = [
   // This is my new tab page, so everything opens right here rather than in another tab.
   const openHere = (href: string) => Object.assign(document.createElement('a'), { href, rel: 'noreferrer' }).click();
 
-  /* ---------- Conversions ---------- */
+  /* ---------- Dialogs ---------- */
 
-  const conversions = $<HTMLDialogElement>('conversions');
-  $('conversions-open').addEventListener('click', () => conversions.showModal());
-  $('conversions-close').addEventListener('click', () => conversions.close());
-  // A click on the backdrop lands on the dialog itself. Only close when the press started there too,
-  // so letting go of a slider outside the dialog doesn't close it.
-  let pressedBackdrop = false;
-  conversions.addEventListener('pointerdown', (e) => (pressedBackdrop = e.target === conversions));
-  conversions.addEventListener('click', (e) => {
-    if (pressedBackdrop && e.target === conversions) conversions.close();
-  });
+  // Conversions, and All zones on the time zone card.
+  for (const id of ['conversions', 'zones']) {
+    const dialog = $<HTMLDialogElement>(id);
+    $(`${id}-open`).addEventListener('click', () => dialog.showModal());
+    $(`${id}-close`).addEventListener('click', () => dialog.close());
+    // A click on the backdrop lands on the dialog itself. Only close when the press started there too,
+    // so letting go of a slider outside the dialog doesn't close it.
+    let pressedBackdrop = false;
+    dialog.addEventListener('pointerdown', (e) => (pressedBackdrop = e.target === dialog));
+    dialog.addEventListener('click', (e) => {
+      if (pressedBackdrop && e.target === dialog) dialog.close();
+    });
+  }
+
+  /* ---------- Conversions ---------- */
 
   // Show Table / Hide Table on each converter.
   for (const toggle of document.querySelectorAll<HTMLButtonElement>('[data-table-toggle]')) {
@@ -497,6 +597,8 @@ const toolLinks = [
 
   /* ---------- Time zones ---------- */
 
+  // The card and the All zones dialog show the same time, so each has its own rows, Unix field, Live
+  // badge, Now button, and clock status.
   const rows = [...document.querySelectorAll<HTMLElement>('[data-zone]')].map((row) => ({
     tz: row.dataset.zone!,
     abbr: row.dataset.abbr,
@@ -505,11 +607,12 @@ const toolLinks = [
     meta: row.querySelector<HTMLElement>('[data-meta]')!,
     friendly: row.querySelector<HTMLElement>('[data-friendly]')!,
   }));
-  const unixInput = $<HTMLInputElement>('tz-unix');
-  const unixDetail = $('tz-unix-detail');
-  const liveBadge = $('tz-live');
-  const nowButton = $<HTMLButtonElement>('tz-now');
-  const clockStatus = $('tz-clock');
+  const unixRows = [...document.querySelectorAll<HTMLElement>('[data-unix]')].map((row) => ({
+    input: row.querySelector<HTMLInputElement>('[data-input]')!,
+    detail: row.querySelector<HTMLElement>('[data-detail]')!,
+  }));
+  const liveBadges = document.querySelectorAll<HTMLElement>('[data-live]');
+  const clockStatuses = document.querySelectorAll<HTMLElement>('[data-clock]');
 
   // "Now" is this device's clock plus its measured offset from Akamai's time service. The offset is 0,
   // which means the device clock, until a sync succeeds or whenever the service can't be reached.
@@ -533,29 +636,37 @@ const toolLinks = [
       }
       if (row.slider !== source) row.slider.value = String(w.hour * 60 + w.minute);
       row.slider.setAttribute('aria-valuetext', friendly);
-      row.meta.textContent = `${zoneAbbreviation(instant, row.tz, row.abbr)} · ${formatOffset(offsetMinutes(instant, row.tz))}`;
+      const abbr = zoneAbbreviation(instant, row.tz, row.abbr);
+      const offset = formatOffset(offsetMinutes(instant, row.tz));
+      row.meta.textContent = abbr ? `${abbr} · ${offset}` : offset;
       row.friendly.textContent = friendly;
     }
-    if (unixInput !== focused) {
-      unixInput.value = String(Math.floor(instant / 1000));
-      unixInput.removeAttribute('aria-invalid');
+    for (const unix of unixRows) {
+      if (unix.input !== focused) {
+        unix.input.value = String(Math.floor(instant / 1000));
+        unix.input.removeAttribute('aria-invalid');
+      }
+      unix.detail.textContent = `${instant} ms · ${relativeTime(instant, now())}`;
     }
-    unixDetail.textContent = `${instant} ms · ${relativeTime(instant, now())}`;
-    liveBadge.hidden = !live;
+    for (const badge of liveBadges) badge.hidden = !live;
   }
 
   /** Gets "now" from the time service again (on load and on every Now click), else the device clock. */
   async function syncClock() {
-    clockStatus.textContent = 'Syncing…';
-    delete clockStatus.dataset.source;
+    for (const status of clockStatuses) {
+      status.textContent = 'Syncing…';
+      delete status.dataset.source;
+    }
     const measured = await measureClockOffset();
     const host = new URL(TIME_SOURCE).host;
     clockOffset = measured?.offset ?? 0;
-    clockStatus.dataset.source = measured ? 'online' : 'device';
-    clockStatus.textContent = measured ? 'Synced' : 'Device clock';
-    clockStatus.title = measured
-      ? `Time from ${host}; this device's clock is ${describeOffset(measured.offset)}.`
-      : `Couldn't reach ${host}, so this is the device's clock.`;
+    for (const status of clockStatuses) {
+      status.dataset.source = measured ? 'online' : 'device';
+      status.textContent = measured ? 'Synced' : 'Device clock';
+      status.title = measured
+        ? `Time from ${host}; this device's clock is ${describeOffset(measured.offset)}.`
+        : `Couldn't reach ${host}, so this is the device's clock.`;
+    }
     tick();
   }
 
@@ -592,19 +703,23 @@ const toolLinks = [
     });
   }
 
-  unixInput.addEventListener('input', () => applyTyped(unixInput, () => parseUnix(unixInput.value)));
-  unixInput.addEventListener('blur', () => renderTime());
-  unixInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') unixInput.value = String(Math.floor(instant / 1000));
-  });
+  for (const { input } of unixRows) {
+    input.addEventListener('input', () => applyTyped(input, () => parseUnix(input.value)));
+    input.addEventListener('blur', () => renderTime());
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') input.value = String(Math.floor(instant / 1000));
+    });
+  }
 
   // Now stays clickable while live, since every click also asks the time service again.
-  nowButton.addEventListener('click', () => {
-    live = true;
-    instant = now();
-    renderTime();
-    syncClock();
-  });
+  for (const button of document.querySelectorAll('[data-now]')) {
+    button.addEventListener('click', () => {
+      live = true;
+      instant = now();
+      renderTime();
+      syncClock();
+    });
+  }
 
   function tick() {
     if (live) instant = now();
@@ -907,9 +1022,10 @@ const toolLinks = [
     background: rgb(11 17 27 / 0.72);
   }
 
+  /* The title keeps its width, and on a phone the actions wrap onto a second line beside it. */
   .panel__head {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: 0 1rem;
     margin-bottom: 0.75rem;
@@ -923,8 +1039,10 @@ const toolLinks = [
 
   .panel__actions {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
-    gap: 0.875rem;
+    gap: 0.5rem 0.875rem;
   }
 
   .panel__hint {
@@ -1382,8 +1500,9 @@ const toolLinks = [
     --track: linear-gradient(90deg, rgb(79 209 193 / 0.16), rgb(240 179 91 / 0.16), rgb(242 139 125 / 0.22));
   }
 
-  /* Conversions dialog. The body carries the padding, so a click on the dialog itself is a backdrop click. */
-  .conversions {
+  /* Conversions and All zones dialogs. The body carries the padding, so a click on the dialog itself is a
+     backdrop click. */
+  .dialog {
     width: min(72rem, calc(100vw - 2rem));
     padding: 0;
     border: 1px solid var(--line-strong);
@@ -1393,27 +1512,32 @@ const toolLinks = [
     box-shadow: 0 24px 80px rgb(0 0 0 / 0.6);
   }
 
-  .conversions::backdrop {
+  .dialog::backdrop {
     background: rgb(3 6 10 / 0.72);
     backdrop-filter: blur(3px);
   }
 
-  .conversions__body {
+  .dialog__body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
     padding: clamp(1rem, 2.5vw, 1.5rem);
   }
 
-  .conversions__head {
+  .dialog__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
   }
 
-  .conversions__title {
+  .dialog__title {
     font-size: 1.125rem;
+  }
+
+  /* All zones has its head right in the body, whose gap already spaces it from the rows. */
+  .dialog__body > .panel__head {
+    margin-bottom: 0;
   }
 
   /* Search */
