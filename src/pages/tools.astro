@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { IMPERIAL, METRIC, SLIDER_MAX_LOG, SLIDER_MIN_LOG, SLIDER_STEPS, UNITS, convert, formatNumber, metersToSlider } from '../lib/length';
-import { formatTemperature, toFahrenheit } from '../lib/temperature';
+import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
 
 const zones = [
   { id: 'central', label: 'Central', tz: 'America/Chicago' },
@@ -43,6 +43,20 @@ const initial = (unit: keyof typeof UNITS) => formatNumber(convert(1, 'm', unit)
 // The temperature converter starts at room temperature.
 const START_CELSIUS = 20;
 
+// Its slider has Fahrenheit marks above and Celsius below, like the length slider's imperial and metric.
+const temperaturePosition = (celsius: number) => ((celsius - COLDEST_C) / (HOTTEST_C - COLDEST_C)) * 100;
+// Minor marks drop out on narrow screens, leaving 0, 100, 200 °C and 0, 200, 400 °F.
+const celsiusTicks = [-40, 0, 50, 100, 150, 200, 250].map((c) => ({
+  label: `${c} °C`,
+  x: temperaturePosition(c),
+  minor: c % 100 !== 0,
+}));
+const fahrenheitTicks = [0, 100, 200, 300, 400, 500].map((f) => ({
+  label: `${f} °F`,
+  x: temperaturePosition(toCelsius(f)),
+  minor: f % 200 !== 0,
+}));
+
 // Plex has no fixed address; the script fills it in once it has looked up the server's IP.
 const shortcuts = [
   { label: 'Plex', id: 'plex-link' },
@@ -50,8 +64,7 @@ const shortcuts = [
   { label: 'YouTube', href: 'https://youtube.com/' },
   { label: 'Gmail', href: 'https://gmail.com/' },
   { label: 'Outlook', href: 'https://outlook.com/' },
-  { label: 'AWS Console', href: 'https://console.aws.amazon.com/' },
-  { label: 'AWS Speakeasy', href: 'https://774065755027.signin.aws.amazon.com/console' },
+  { label: 'AWS', href: 'https://774065755027.signin.aws.amazon.com/console' },
 ];
 ---
 
@@ -74,26 +87,7 @@ const shortcuts = [
         </ul>
       </nav>
 
-      <div class="temp" role="group" aria-label="Temperature">
-        <label class="unit__box">
-          <span class="visually-hidden">Celsius</span>
-          <input class="unit__input" id="temp-c" type="text" autocomplete="off" spellcheck="false" value={START_CELSIUS} />
-          <span class="unit__suffix" aria-hidden="true">°C</span>
-        </label>
-        <span class="temp__equals" aria-hidden="true">=</span>
-        <label class="unit__box">
-          <span class="visually-hidden">Fahrenheit</span>
-          <input
-            class="unit__input"
-            id="temp-f"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            value={formatTemperature(toFahrenheit(START_CELSIUS))}
-          />
-          <span class="unit__suffix" aria-hidden="true">°F</span>
-        </label>
-      </div>
+      <button class="button" type="button" id="conversions-open" aria-haspopup="dialog">Conversions</button>
     </div>
 
     <section class="panel" aria-labelledby="tz-title">
@@ -161,66 +155,6 @@ const shortcuts = [
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="len-title">
-      <div class="panel__head">
-        <h2 class="panel__title" id="len-title">Length</h2>
-      </div>
-
-      <div class="len">
-        <fieldset class="len__group len__group--metric">
-          <legend class="eyebrow">Metric</legend>
-          <div class="len__fields">
-            {
-              METRIC.map((u) => (
-                <label class="unit">
-                  <span class="unit__name">{UNITS[u].name}</span>
-                  <span class="unit__box">
-                    <input class="unit__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value={initial(u)} data-unit={u} />
-                    <span class="unit__suffix">{u}</span>
-                  </span>
-                </label>
-              ))
-            }
-          </div>
-        </fieldset>
-        <fieldset class="len__group len__group--imperial">
-          <legend class="eyebrow">Imperial</legend>
-          <div class="len__fields">
-            {
-              IMPERIAL.map((u) => (
-                <label class="unit">
-                  <span class="unit__name">{UNITS[u].name}</span>
-                  <span class="unit__box">
-                    <input class="unit__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value={initial(u)} data-unit={u} />
-                    <span class="unit__suffix">{u}</span>
-                  </span>
-                </label>
-              ))
-            }
-          </div>
-        </fieldset>
-      </div>
-
-      <div class="len__scale">
-        <div class="ticks ticks--imperial" aria-hidden="true">
-          {imperialTicks.map((t) => <span style={`--x: ${t.x}%`}>{t.label}</span>)}
-        </div>
-        <input
-          class="len__slider"
-          id="len-slider"
-          type="range"
-          min="0"
-          max={SLIDER_STEPS}
-          step="1"
-          value={metersToSlider(1)}
-          aria-label="Length on a log scale from 1 millimeter to 1,000 kilometers"
-        />
-        <div class="ticks ticks--metric" aria-hidden="true">
-          {metricTicks.map((t) => <span class:list={{ minor: t.minor }} style={`--x: ${t.x}%`}>{t.label}</span>)}
-        </div>
-      </div>
-    </section>
-
     <section class="search" aria-label="Web search">
       <form class="search__form" action="https://www.google.com/search" method="get" target="_blank" rel="noopener noreferrer" role="search">
         <label class="search__engine" for="q-google">Google</label>
@@ -247,6 +181,124 @@ const shortcuts = [
         <code>chris-new-tab</code> folder.
       </span>
     </p>
+
+    <dialog class="conversions" id="conversions" aria-labelledby="conversions-title">
+      <div class="conversions__body">
+        <div class="conversions__head">
+          <h2 class="conversions__title" id="conversions-title">Conversions</h2>
+          <button class="button button--small" type="button" id="conversions-close">Close</button>
+        </div>
+
+        <section class="panel" aria-labelledby="len-title">
+          <div class="panel__head">
+            <h3 class="panel__title" id="len-title">Length</h3>
+          </div>
+
+          <div class="len">
+            <fieldset class="len__group len__group--metric">
+              <legend class="eyebrow">Metric</legend>
+              <div class="len__fields">
+                {
+                  METRIC.map((u) => (
+                    <label class="unit">
+                      <span class="unit__name">{UNITS[u].name}</span>
+                      <span class="unit__box">
+                        <input class="unit__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value={initial(u)} data-unit={u} />
+                        <span class="unit__suffix">{u}</span>
+                      </span>
+                    </label>
+                  ))
+                }
+              </div>
+            </fieldset>
+            <fieldset class="len__group len__group--imperial">
+              <legend class="eyebrow">Imperial</legend>
+              <div class="len__fields">
+                {
+                  IMPERIAL.map((u) => (
+                    <label class="unit">
+                      <span class="unit__name">{UNITS[u].name}</span>
+                      <span class="unit__box">
+                        <input class="unit__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value={initial(u)} data-unit={u} />
+                        <span class="unit__suffix">{u}</span>
+                      </span>
+                    </label>
+                  ))
+                }
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="len__scale">
+            <div class="ticks ticks--imperial" aria-hidden="true">
+              {imperialTicks.map((t) => <span style={`--x: ${t.x}%`}>{t.label}</span>)}
+            </div>
+            <input
+              class="len__slider"
+              id="len-slider"
+              type="range"
+              min="0"
+              max={SLIDER_STEPS}
+              step="1"
+              value={metersToSlider(1)}
+              aria-label="Length on a log scale from 1 millimeter to 1,000 kilometers"
+            />
+            <div class="ticks ticks--metric" aria-hidden="true">
+              {metricTicks.map((t) => <span class:list={{ minor: t.minor }} style={`--x: ${t.x}%`}>{t.label}</span>)}
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="temp-title">
+          <div class="panel__head">
+            <h3 class="panel__title" id="temp-title">Temperature</h3>
+          </div>
+
+          <div class="temp">
+            <label class="unit">
+              <span class="unit__name">Celsius</span>
+              <span class="unit__box">
+                <input class="unit__input" id="temp-c" type="text" autocomplete="off" spellcheck="false" value={START_CELSIUS} />
+                <span class="unit__suffix">°C</span>
+              </span>
+            </label>
+            <label class="unit">
+              <span class="unit__name">Fahrenheit</span>
+              <span class="unit__box">
+                <input
+                  class="unit__input"
+                  id="temp-f"
+                  type="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value={formatTemperature(toFahrenheit(START_CELSIUS))}
+                />
+                <span class="unit__suffix">°F</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="temp__scale">
+            <div class="ticks ticks--imperial" aria-hidden="true">
+              {fahrenheitTicks.map((t) => <span class:list={{ minor: t.minor }} style={`--x: ${t.x}%`}>{t.label}</span>)}
+            </div>
+            <input
+              class="temp__slider"
+              id="temp-slider"
+              type="range"
+              min={toFahrenheit(COLDEST_C)}
+              max={toFahrenheit(HOTTEST_C)}
+              step="1"
+              value={toFahrenheit(START_CELSIUS)}
+              aria-label={`Temperature from ${COLDEST_C} to ${HOTTEST_C} °C`}
+            />
+            <div class="ticks ticks--metric" aria-hidden="true">
+              {celsiusTicks.map((t) => <span class:list={{ minor: t.minor }} style={`--x: ${t.x}%`}>{t.label}</span>)}
+            </div>
+          </div>
+        </section>
+      </div>
+    </dialog>
   </div>
 </Base>
 
@@ -276,7 +328,7 @@ const shortcuts = [
   } from '../lib/length';
   import { PLEX_HOST, lookupPlexUrl } from '../lib/plex';
   import { urlFromQuery } from '../lib/search';
-  import { formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
+  import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -291,39 +343,18 @@ const shortcuts = [
       else plexLink.title = `Couldn't look up ${PLEX_HOST}`;
     });
 
-  /* ---------- Temperature ---------- */
+  /* ---------- Conversions ---------- */
 
-  const celsiusInput = $<HTMLInputElement>('temp-c');
-  const fahrenheitInput = $<HTMLInputElement>('temp-f');
-  let celsius = parseNumber(celsiusInput.value);
-
-  /** Redraws both fields except the one being typed in. */
-  function renderTemperature(source?: Element) {
-    const shown: [HTMLInputElement, number][] = [
-      [celsiusInput, celsius],
-      [fahrenheitInput, toFahrenheit(celsius)],
-    ];
-    for (const [input, degrees] of shown) {
-      if (input === source) continue;
-      input.value = formatTemperature(degrees);
-      input.removeAttribute('aria-invalid');
-    }
-  }
-
-  for (const [input, fromInput] of [
-    [celsiusInput, (degrees: number) => degrees],
-    [fahrenheitInput, toCelsius],
-  ] as const) {
-    input.addEventListener('input', () => {
-      if (!input.value.trim()) return input.removeAttribute('aria-invalid');
-      const degrees = parseNumber(input.value);
-      if (Number.isNaN(degrees)) return input.setAttribute('aria-invalid', 'true');
-      input.removeAttribute('aria-invalid');
-      celsius = fromInput(degrees);
-      renderTemperature(input);
-    });
-    input.addEventListener('blur', () => renderTemperature());
-  }
+  const conversions = $<HTMLDialogElement>('conversions');
+  $('conversions-open').addEventListener('click', () => conversions.showModal());
+  $('conversions-close').addEventListener('click', () => conversions.close());
+  // A click on the backdrop lands on the dialog itself. Only close when the press started there too,
+  // so letting go of a slider outside the dialog doesn't close it.
+  let pressedBackdrop = false;
+  conversions.addEventListener('pointerdown', (e) => (pressedBackdrop = e.target === conversions));
+  conversions.addEventListener('click', (e) => {
+    if (pressedBackdrop && e.target === conversions) conversions.close();
+  });
 
   /* ---------- Time zones ---------- */
 
@@ -473,6 +504,61 @@ const shortcuts = [
 
   renderLength();
 
+  /* ---------- Temperature ---------- */
+
+  const celsiusInput = $<HTMLInputElement>('temp-c');
+  const fahrenheitInput = $<HTMLInputElement>('temp-f');
+  const temperatureSlider = $<HTMLInputElement>('temp-slider');
+  let celsius = parseNumber(celsiusInput.value);
+  // The scale last typed in, Fahrenheit until then. The slider moves in whole degrees of it,
+  // over the same span in both scales.
+  let activeScale: 'c' | 'f' = 'f';
+
+  /** Redraws the fields and slider, except the one being typed in or dragged. */
+  function renderTemperature(source?: Element) {
+    const shown: [HTMLInputElement, number][] = [
+      [celsiusInput, celsius],
+      [fahrenheitInput, toFahrenheit(celsius)],
+    ];
+    for (const [input, degrees] of shown) {
+      if (input === source) continue;
+      input.value = formatTemperature(degrees);
+      input.removeAttribute('aria-invalid');
+    }
+    const onScale = activeScale === 'c' ? celsius : toFahrenheit(celsius);
+    if (source !== temperatureSlider) temperatureSlider.value = String(onScale);
+    temperatureSlider.setAttribute('aria-valuetext', `${formatTemperature(onScale)} °${activeScale.toUpperCase()}`);
+  }
+
+  for (const [input, scale] of [
+    [celsiusInput, 'c'],
+    [fahrenheitInput, 'f'],
+  ] as const) {
+    input.addEventListener('focus', () => {
+      activeScale = scale;
+      temperatureSlider.min = String(scale === 'c' ? COLDEST_C : toFahrenheit(COLDEST_C));
+      temperatureSlider.max = String(scale === 'c' ? HOTTEST_C : toFahrenheit(HOTTEST_C));
+      renderTemperature(input);
+    });
+    input.addEventListener('input', () => {
+      if (!input.value.trim()) return input.removeAttribute('aria-invalid');
+      const degrees = parseNumber(input.value);
+      if (Number.isNaN(degrees)) return input.setAttribute('aria-invalid', 'true');
+      input.removeAttribute('aria-invalid');
+      celsius = scale === 'c' ? degrees : toCelsius(degrees);
+      renderTemperature(input);
+    });
+    input.addEventListener('blur', () => renderTemperature());
+  }
+
+  temperatureSlider.addEventListener('input', () => {
+    const degrees = Number(temperatureSlider.value);
+    celsius = activeScale === 'c' ? degrees : toCelsius(degrees);
+    renderTemperature(temperatureSlider);
+  });
+
+  renderTemperature();
+
   /* ---------- Search ---------- */
 
   // A URL or domain in the Google box opens that site in a new tab instead of searching for it.
@@ -493,27 +579,13 @@ const shortcuts = [
     padding-block: 1.5rem;
   }
 
-  /* Shortcuts, with the temperature converter at the right end of the row */
+  /* Shortcuts, with the Conversions button at the right end of the row */
   .topbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem 1rem;
-  }
-
-  .temp {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .temp .unit__box {
-    width: 7.5rem;
-  }
-
-  .temp__equals {
-    color: var(--text-3);
   }
 
   .shortcuts {
@@ -879,7 +951,8 @@ const shortcuts = [
     font-size: 0.8125rem;
   }
 
-  .len__scale {
+  .len__scale,
+  .temp__scale {
     margin-top: 1rem;
   }
 
@@ -896,6 +969,53 @@ const shortcuts = [
 
   .ticks--metric {
     --thumb-w: 12px;
+  }
+
+  /* Temperature */
+  .temp {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 11rem));
+    gap: 0.75rem;
+  }
+
+  /* Cold to hot. */
+  .temp__slider {
+    --thumb-w: 12px;
+    --track: linear-gradient(90deg, rgb(79 209 193 / 0.16), rgb(240 179 91 / 0.16), rgb(242 139 125 / 0.22));
+  }
+
+  /* Conversions dialog. The body carries the padding, so a click on the dialog itself is a backdrop click. */
+  .conversions {
+    width: min(72rem, calc(100vw - 2rem));
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 16px;
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: 0 24px 80px rgb(0 0 0 / 0.6);
+  }
+
+  .conversions::backdrop {
+    background: rgb(3 6 10 / 0.72);
+    backdrop-filter: blur(3px);
+  }
+
+  .conversions__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+  }
+
+  .conversions__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .conversions__title {
+    font-size: 1.125rem;
   }
 
   /* Search */
