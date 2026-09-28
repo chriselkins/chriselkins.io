@@ -45,6 +45,10 @@ const START_CELSIUS = 20;
 
 // Its slider has Fahrenheit marks above and Celsius below, like the length slider's imperial and metric.
 const temperaturePosition = (celsius: number) => ((celsius - COLDEST_C) / (HOTTEST_C - COLDEST_C)) * 100;
+// Show Table lists: -20 to 50 °C in 5° steps, which are whole degrees in both scales, and 1 to 10 cm.
+const temperatureTable = Array.from({ length: 15 }, (_, i) => -20 + i * 5).map((c) => [c, formatTemperature(toFahrenheit(c))]);
+const lengthTable = Array.from({ length: 10 }, (_, i) => i + 1).map((cm) => [cm, convert(cm, 'cm', 'in').toFixed(2)]);
+
 // Minor marks drop out on narrow screens, leaving 0, 100, 200 °C and 0, 200, 400 °F.
 const celsiusTicks = [-40, 0, 50, 100, 150, 200, 250].map((c) => ({
   label: `${c} °C`,
@@ -224,6 +228,9 @@ const assistants = [
         <section class="panel" aria-labelledby="len-title">
           <div class="panel__head">
             <h3 class="panel__title" id="len-title">Length</h3>
+            <div class="panel__actions">
+              <button class="button button--small" type="button" aria-expanded="false" aria-controls="len-table" data-table-toggle>Show Table</button>
+            </div>
           </div>
 
           <div class="len">
@@ -279,11 +286,26 @@ const assistants = [
               {metricTicks.map((t) => <span class:list={{ minor: t.minor }} style={`--x: ${t.x}%`}>{t.label}</span>)}
             </div>
           </div>
+
+          <div class="convert-table" id="len-table" hidden>
+            <table>
+              <caption class="visually-hidden">Centimeters to inches</caption>
+              <thead>
+                <tr><th scope="col">Centimeters</th><th scope="col">Inches</th></tr>
+              </thead>
+              <tbody>
+                {lengthTable.map(([cm, inches]) => <tr><td>{cm}</td><td>{inches}</td></tr>)}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section class="panel" aria-labelledby="temp-title">
           <div class="panel__head">
             <h3 class="panel__title" id="temp-title">Temperature</h3>
+            <div class="panel__actions">
+              <button class="button button--small" type="button" aria-expanded="false" aria-controls="temp-table" data-table-toggle>Show Table</button>
+            </div>
           </div>
 
           <div class="temp">
@@ -327,6 +349,18 @@ const assistants = [
             <div class="ticks ticks--metric" aria-hidden="true">
               {celsiusTicks.map((t) => <span class:list={{ minor: t.minor }} style={`--x: ${t.x}%`}>{t.label}</span>)}
             </div>
+          </div>
+
+          <div class="convert-table" id="temp-table" hidden>
+            <table>
+              <caption class="visually-hidden">Celsius to Fahrenheit</caption>
+              <thead>
+                <tr><th scope="col">Celsius</th><th scope="col">Fahrenheit</th></tr>
+              </thead>
+              <tbody>
+                {temperatureTable.map(([c, f]) => <tr><td>{c}</td><td>{f}</td></tr>)}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>
@@ -389,6 +423,17 @@ const assistants = [
   conversions.addEventListener('click', (e) => {
     if (pressedBackdrop && e.target === conversions) conversions.close();
   });
+
+  // Show Table / Hide Table on each converter.
+  for (const toggle of document.querySelectorAll<HTMLButtonElement>('[data-table-toggle]')) {
+    const table = $(toggle.getAttribute('aria-controls')!);
+    toggle.addEventListener('click', () => {
+      table.hidden = !table.hidden;
+      toggle.setAttribute('aria-expanded', String(!table.hidden));
+      toggle.textContent = table.hidden ? 'Show Table' : 'Hide Table';
+      if (!table.hidden) table.scrollIntoView({ block: 'nearest' });
+    });
+  }
 
   /* ---------- Time zones ---------- */
 
@@ -1021,6 +1066,43 @@ const assistants = [
 
   .ticks--metric {
     --thumb-w: 12px;
+  }
+
+  /* Reference tables behind each converter's Show Table toggle. No display rule here, so hidden works. */
+  .convert-table {
+    margin-top: 1.25rem;
+  }
+
+  .convert-table table {
+    width: min(100%, 22rem);
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .convert-table th,
+  .convert-table td {
+    padding: 0.375rem 0.875rem;
+    border-bottom: 1px solid var(--line);
+    text-align: right;
+  }
+
+  /* Metric on the left and imperial on the right, colored like the legends and tick marks. */
+  .convert-table th {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal);
+  }
+
+  .convert-table th:last-child {
+    color: var(--amber);
+  }
+
+  .convert-table td {
+    font-family: var(--mono);
+    font-size: 0.875rem;
   }
 
   /* Temperature */
