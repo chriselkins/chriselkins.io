@@ -84,6 +84,14 @@ const assistants = [
   { id: 'gemini', label: 'Gemini', url: 'https://gemini.google.com/app?prompt=' },
   { id: 'claude', label: 'Claude', url: 'https://claude.ai/new?q=' },
   { id: 'perplexity', label: 'Perplexity', url: 'https://www.perplexity.ai/search?q=' },
+  { id: 'higgsfield-image', label: 'Higgsfield Image', url: 'https://higgsfield.ai/ai/image?prompt=', placeholder: 'Describe an image' },
+  { id: 'higgsfield-video', label: 'Higgsfield Video', url: 'https://higgsfield.ai/ai/video?prompt=', placeholder: 'Describe a video' },
+];
+
+// Links along the top, beside the Conversions button.
+const toolLinks = [
+  { label: 'IT Tools', href: 'https://it-tools.tech/' },
+  { label: 'Dev Tools', href: 'https://devtoys.pro/' },
 ];
 ---
 
@@ -92,6 +100,13 @@ const assistants = [
     <h1 class="visually-hidden">Tools</h1>
 
     <div class="topbar">
+      {
+        toolLinks.map((l) => (
+          <a class="button button--small" href={l.href} target="_blank" rel="noopener noreferrer">
+            {l.label}
+          </a>
+        ))
+      }
       <button class="button button--small" type="button" id="conversions-open" aria-haspopup="dialog">Conversions</button>
     </div>
 
@@ -173,7 +188,7 @@ const assistants = [
               id={`ask-${a.id}`}
               name="prompt"
               rows="1"
-              placeholder={`Ask ${a.label}`}
+              placeholder={a.placeholder ?? `Ask ${a.label}`}
               enterkeyhint="send"
               required
             />
@@ -1356,7 +1371,7 @@ const assistants = [
   /* Assistants: the search pill, growing a line at a time as I type. */
   .ask {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
     gap: 0.75rem 1rem;
   }
@@ -1366,11 +1381,12 @@ const assistants = [
     border-radius: 1.625rem;
   }
 
-  /* One width for every label (Perplexity is the longest), so the prompts line up across the grid. */
+  /* One width for every label, so the prompts line up across the grid; Higgsfield Image wraps to two lines. */
   .ask__form .search__engine {
     display: flex;
     align-items: center;
-    min-width: 7.5rem;
+    width: 7.5rem;
+    line-height: 1.35;
   }
 
   .ask__input {
@@ -1479,6 +1495,10 @@ const assistants = [
     .len,
     .conversions__row {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ask {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
