@@ -73,9 +73,20 @@ const START_CELSIUS = 20;
 
 // Its slider has Fahrenheit marks above and Celsius below, like the length slider's imperial and metric.
 const temperaturePosition = (celsius: number) => ((celsius - COLDEST_C) / (HOTTEST_C - COLDEST_C)) * 100;
-// Show Table lists: -20 to 50 °C in 5° steps, which are whole degrees in both scales, and 1 to 10 cm.
+// Show Table lists: -20 to 50 °C in 5° steps, which are whole degrees in both scales, and 1 to 10 cm, m,
+// and km, side by side, in inches, feet, and miles.
 const temperatureTable = Array.from({ length: 15 }, (_, i) => -20 + i * 5).map((c) => [c, formatTemperature(toFahrenheit(c))]);
-const lengthTable = Array.from({ length: 10 }, (_, i) => i + 1).map((cm) => [cm, convert(cm, 'cm', 'in').toFixed(2)]);
+const lengthTables = (
+  [
+    ['cm', 'in'],
+    ['m', 'ft'],
+    ['km', 'mi'],
+  ] as const
+).map(([from, to]) => ({
+  from: UNITS[from].name,
+  to: UNITS[to].name,
+  rows: Array.from({ length: 10 }, (_, i) => i + 1).map((n) => [n, convert(n, from, to).toFixed(2)]),
+}));
 
 // Minor marks drop out on narrow screens, leaving -40, 0, 40, 80 °C and 0, 100, 200 °F.
 const celsiusTicks = [-40, -20, 0, 20, 40, 60, 80, 100].map((c) => ({
@@ -417,15 +428,21 @@ const toolLinks = [
           </div>
 
           <div class="convert-table" id="len-table" hidden>
-            <table>
-              <caption class="visually-hidden">Centimeters to inches</caption>
-              <thead>
-                <tr><th scope="col">Centimeters</th><th scope="col">Inches</th></tr>
-              </thead>
-              <tbody>
-                {lengthTable.map(([cm, inches]) => <tr><td>{cm}</td><td>{inches}</td></tr>)}
-              </tbody>
-            </table>
+            <div class="convert-table__grid">
+              {
+                lengthTables.map((t) => (
+                  <table>
+                    <caption class="visually-hidden">{t.from} to {t.to.toLowerCase()}</caption>
+                    <thead>
+                      <tr><th scope="col">{t.from}</th><th scope="col">{t.to}</th></tr>
+                    </thead>
+                    <tbody>
+                      {t.rows.map(([n, v]) => <tr><td>{n}</td><td>{v}</td></tr>)}
+                    </tbody>
+                  </table>
+                ))
+              }
+            </div>
           </div>
         </section>
 
@@ -1400,6 +1417,13 @@ const toolLinks = [
   /* Reference tables behind each converter's Show Table toggle. No display rule here, so hidden works. */
   .convert-table {
     margin-top: 1.25rem;
+  }
+
+  /* Length's three tables sit side by side and wrap when the dialog is too narrow for them. */
+  .convert-table__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem 2rem;
   }
 
   .convert-table table {
