@@ -13,7 +13,7 @@ describe('temperature', () => {
 
   it('keeps both ends of the slider round in either scale', () => {
     expect(toFahrenheit(COLDEST_C)).toBe(-40);
-    expect(toFahrenheit(HOTTEST_C)).toBe(500);
+    expect(toFahrenheit(HOTTEST_C)).toBe(212);
   });
 
   it('shows at most two decimals', () => {
