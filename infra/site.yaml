@@ -162,12 +162,11 @@ Resources:
         Comment: !Sub 'Security headers for ${DomainName}'
         SecurityHeadersConfig:
           # style-src needs 'unsafe-inline' for syntax-highlighting colors in code blocks; scripts stay 'self' only.
-          # connect-src allows what /tools/ fetches: Cloudflare's DNS over HTTPS for my Plex server's IP, and
-          # Akamai's time service for an accurate clock.
+          # connect-src allows Akamai's time service, which /tools/ uses for an accurate clock.
           ContentSecurityPolicy:
             ContentSecurityPolicy: >-
               default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-              img-src 'self'; font-src 'self'; connect-src 'self' https://cloudflare-dns.com https://time.akamai.com;
+              img-src 'self'; font-src 'self'; connect-src 'self' https://time.akamai.com;
               form-action https://www.google.com https://duckduckgo.com;
               frame-ancestors 'none'; base-uri 'self'; object-src 'none';
               upgrade-insecure-requests
@@ -213,7 +212,7 @@ Resources:
           ContentSecurityPolicy:
             ContentSecurityPolicy: >-
               default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-              img-src 'self'; font-src 'self'; connect-src 'self' https://cloudflare-dns.com https://time.akamai.com;
+              img-src 'self'; font-src 'self'; connect-src 'self' https://time.akamai.com;
               form-action https://www.google.com https://duckduckgo.com;
               frame-ancestors 'none'; base-uri 'self'; object-src 'none';
               upgrade-insecure-requests

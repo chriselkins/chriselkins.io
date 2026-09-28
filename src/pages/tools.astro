@@ -77,16 +77,6 @@ const cidrRows = [
   { key: 'count', label: 'Addresses' },
 ] as const;
 
-// Plex has no fixed address; the script fills it in once it has looked up the server's IP.
-const shortcuts = [
-  { label: 'Plex', id: 'plex-link' },
-  { label: 'YouTube', href: 'https://youtube.com/' },
-  { label: 'Gmail', href: 'https://gmail.com/' },
-  { label: 'Outlook', href: 'https://outlook.com/' },
-  { label: 'AWS', href: 'https://774065755027.signin.aws.amazon.com/console' },
-  { label: 'IPTorrents', href: 'https://iptorrents.com/' },
-];
-
 // Prompt boxes start a new chat in a new tab. Gemini has no prompt parameter of its own; the
 // new tab extension fills its box from ?prompt=.
 const assistants = [
@@ -102,21 +92,7 @@ const assistants = [
     <h1 class="visually-hidden">Tools</h1>
 
     <div class="topbar">
-      <nav aria-label="Shortcuts">
-        <ul role="list" class="shortcuts">
-          {
-            shortcuts.map((s) => (
-              <li>
-                <a class="button shortcut" id={s.id} href={s.href} target="_blank" rel="noopener noreferrer">
-                  {s.label}
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-      </nav>
-
-      <button class="button" type="button" id="conversions-open" aria-haspopup="dialog">Conversions</button>
+      <button class="button button--small" type="button" id="conversions-open" aria-haspopup="dialog">Conversions</button>
     </div>
 
     <section class="panel" aria-labelledby="tz-title">
@@ -446,7 +422,6 @@ const assistants = [
     toMicrometers,
     type Unit,
   } from '../lib/length';
-  import { PLEX_HOST, lookupPlexUrl } from '../lib/plex';
   import { urlFromQuery } from '../lib/search';
   import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
   import { describeSubnet, formatIPv4, parseCidr } from '../lib/cidr';
@@ -455,17 +430,6 @@ const assistants = [
   const $ =<T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const openInNewTab = (href: string) =>
     Object.assign(document.createElement('a'), { href, target: '_blank', rel: 'noopener noreferrer' }).click();
-
-  /* ---------- Shortcuts ---------- */
-
-  // Plex follows my home IP, so its address is looked up fresh each time the page opens.
-  const plexLink = $<HTMLAnchorElement>('plex-link');
-  lookupPlexUrl()
-    .catch(() => null)
-    .then((url) => {
-      if (url) plexLink.href = url;
-      else plexLink.title = `Couldn't look up ${PLEX_HOST}`;
-    });
 
   /* ---------- Conversions ---------- */
 
@@ -785,30 +749,12 @@ const assistants = [
     padding-block: 1.25rem;
   }
 
-  /* Shortcuts, with the Conversions button at the right end of the row */
+  /* Tool buttons along the top right, starting with Conversions. */
   .topbar {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-  }
-
-  .shortcuts {
-    display: flex;
-    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0.5rem;
-  }
-
-  /* Plex, until its address has been looked up. */
-  .shortcut:not([href]) {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  .shortcut:not([href]):hover {
-    border-color: var(--line-strong);
-    color: var(--text);
   }
 
   /* Panels */
