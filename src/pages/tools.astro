@@ -65,6 +65,14 @@ const shortcuts = [
   { label: 'Gmail', href: 'https://gmail.com/' },
   { label: 'Outlook', href: 'https://outlook.com/' },
   { label: 'AWS', href: 'https://774065755027.signin.aws.amazon.com/console' },
+  { label: 'IPTorrents', href: 'https://iptorrents.com/' },
+];
+
+// Prompt boxes start a new chat in a new tab. Gemini has no prompt parameter of its own; the
+// new tab extension fills its box from ?prompt=.
+const assistants = [
+  { id: 'chatgpt', label: 'ChatGPT', url: 'https://chatgpt.com/?prompt=' },
+  { id: 'gemini', label: 'Gemini', url: 'https://gemini.google.com/app?prompt=' },
 ];
 ---
 
@@ -153,6 +161,30 @@ const shortcuts = [
           <span class="tz__friendly tz__unix-detail" id="tz-unix-detail"></span>
         </div>
       </div>
+    </section>
+
+    <section class="ask" aria-label="Ask an assistant">
+      {
+        assistants.map((a) => (
+          <form class="search__form ask__form" data-prompt-url={a.url}>
+            <label class="search__engine" for={`ask-${a.id}`}>
+              {a.label}
+            </label>
+            <textarea
+              class="ask__input"
+              id={`ask-${a.id}`}
+              name="prompt"
+              rows="1"
+              placeholder={`Ask ${a.label}`}
+              enterkeyhint="send"
+              required
+            />
+            <button class="search__go" type="submit" aria-label={`Ask ${a.label} in a new tab`}>
+              <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+        ))
+      }
     </section>
 
     <section class="search" aria-label="Web search">
@@ -331,6 +363,8 @@ const shortcuts = [
   import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const openInNewTab = (href: string) =>
+    Object.assign(document.createElement('a'), { href, target: '_blank', rel: 'noopener noreferrer' }).click();
 
   /* ---------- Shortcuts ---------- */
 
@@ -567,8 +601,26 @@ const shortcuts = [
     const url = urlFromQuery(googleInput.value);
     if (!url) return;
     e.preventDefault();
-    Object.assign(document.createElement('a'), { href: url, target: '_blank', rel: 'noopener noreferrer' }).click();
+    openInNewTab(url);
   });
+
+  /* ---------- Assistants ---------- */
+
+  // Enter sends and Shift+Enter starts a new line, as in ChatGPT and Gemini themselves. The prompt
+  // opens as a link rather than a form submission, so the CSP's form-action can stay narrow.
+  for (const form of document.querySelectorAll<HTMLFormElement>('[data-prompt-url]')) {
+    const prompt = form.querySelector('textarea')!;
+    prompt.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+      e.preventDefault();
+      form.requestSubmit();
+    });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = prompt.value.trim();
+      if (text) openInNewTab(form.dataset.promptUrl + encodeURIComponent(text));
+    });
+  }
 </script>
 
 <style>
@@ -1097,6 +1149,53 @@ const shortcuts = [
     color: #04110f;
   }
 
+  /* Assistants: the search pill, growing a line at a time as I type. */
+  .ask {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 1rem;
+  }
+
+  .ask__form {
+    align-items: stretch;
+    border-radius: 1.625rem;
+  }
+
+  .ask__form .search__engine {
+    display: flex;
+    align-items: center;
+  }
+
+  .ask__input {
+    flex: 1;
+    min-width: 0;
+    min-height: 3.25rem;
+    max-height: 12rem;
+    padding: 0.9rem 1rem;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1.45rem;
+    resize: none;
+    field-sizing: content;
+  }
+
+  .ask__input::placeholder {
+    color: var(--text-3);
+  }
+
+  .ask__input:focus {
+    outline: none;
+  }
+
+  .ask__form .search__go {
+    align-self: flex-end;
+    margin-bottom: 0.375rem;
+  }
+
   /* Extension download, kept quiet since this is my start page */
   .extension {
     display: flex;
@@ -1177,6 +1276,7 @@ const shortcuts = [
   }
 
   @media (max-width: 720px) {
+    .ask,
     .search {
       grid-template-columns: minmax(0, 1fr);
     }
