@@ -5,8 +5,10 @@ import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from
 import { describeSubnet, formatIPv4, maskFromBits, parseIPv4 } from '../lib/cidr';
 
 const zones = [
-  { id: 'central', label: 'Central', tz: 'America/Chicago' },
   { id: 'eastern', label: 'Eastern', tz: 'America/New_York' },
+  { id: 'central', label: 'Central', tz: 'America/Chicago' },
+  { id: 'mountain', label: 'Mountain', tz: 'America/Denver' },
+  { id: 'pacific', label: 'Pacific', tz: 'America/Los_Angeles' },
   { id: 'india', label: 'India', tz: 'Asia/Kolkata', abbr: 'IST' },
   { id: 'utc', label: 'UTC', tz: 'UTC' },
 ];
@@ -119,6 +121,7 @@ const assistants = [
       <div class="panel__head">
         <h2 class="panel__title" id="tz-title">Time zones</h2>
         <div class="panel__actions">
+          <span class="clock" id="tz-clock" aria-live="polite"></span>
           <span class="live" id="tz-live"><span class="live__dot" aria-hidden="true"></span>Live</span>
           <button class="button button--small" id="tz-now" type="button">Now</button>
         </div>
@@ -445,6 +448,7 @@ const assistants = [
   import { urlFromQuery } from '../lib/search';
   import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
   import { describeSubnet, formatIPv4, parseCidr } from '../lib/cidr';
+  import { TIME_SOURCE, describeOffset, measureClockOffset } from '../lib/clock';
 
   const $ =<T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const openInNewTab = (href: string) =>
@@ -499,8 +503,14 @@ const assistants = [
   const unixDetail = $('tz-unix-detail');
   const liveBadge = $('tz-live');
   const nowButton = $<HTMLButtonElement>('tz-now');
+  const clockStatus = $('tz-clock');
 
-  let instant = Date.now();
+  // "Now" is this device's clock plus its measured offset from Akamai's time service. The offset is 0,
+  // which means the device clock, until a sync succeeds or whenever the service can't be reached.
+  let clockOffset = 0;
+  const now = () => Date.now() + clockOffset;
+
+  let instant = now();
   let live = true;
   // What a field showed when editing started, so partial input like "12" can't shift the base.
   let editBase = instant;
@@ -524,9 +534,23 @@ const assistants = [
       unixInput.value = String(Math.floor(instant / 1000));
       unixInput.removeAttribute('aria-invalid');
     }
-    unixDetail.textContent = `${instant} ms · ${relativeTime(instant, Date.now())}`;
+    unixDetail.textContent = `${instant} ms · ${relativeTime(instant, now())}`;
     liveBadge.hidden = !live;
-    nowButton.disabled = live;
+  }
+
+  /** Gets "now" from the time service again (on load and on every Now click), else the device clock. */
+  async function syncClock() {
+    clockStatus.textContent = 'Syncing…';
+    delete clockStatus.dataset.source;
+    const measured = await measureClockOffset();
+    const host = new URL(TIME_SOURCE).host;
+    clockOffset = measured?.offset ?? 0;
+    clockStatus.dataset.source = measured ? 'online' : 'device';
+    clockStatus.textContent = measured ? 'Synced' : 'Device clock';
+    clockStatus.title = measured
+      ? `Time from ${host}; this device's clock is ${describeOffset(measured.offset)}.`
+      : `Couldn't reach ${host}, so this is the device's clock.`;
+    tick();
   }
 
   function setInstant(next: number, source?: Element) {
@@ -568,26 +592,29 @@ const assistants = [
     if (e.key === 'Enter') unixInput.value = String(Math.floor(instant / 1000));
   });
 
+  // Now stays clickable while live, since every click also asks the time service again.
   nowButton.addEventListener('click', () => {
     live = true;
-    instant = Date.now();
+    instant = now();
     renderTime();
+    syncClock();
   });
 
   function tick() {
-    if (live) instant = Date.now();
+    if (live) instant = now();
     renderTime();
   }
 
-  // Tick on each second boundary so the seconds change in step with the system clock.
+  // Tick on each second boundary so the seconds change in step with the (synced) clock.
   (function schedule() {
     setTimeout(() => {
       tick();
       schedule();
-    }, 1000 - (Date.now() % 1000) + 10);
+    }, 1000 - (now() % 1000) + 10);
   })();
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && tick());
   renderTime();
+  syncClock();
 
   /* ---------- Length ---------- */
 
@@ -842,6 +869,20 @@ const assistants = [
     font-size: 0.75rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
+  }
+
+  /* Where "now" comes from: synced with the time service, or this device's clock when it can't be reached. */
+  .clock {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: help;
+  }
+
+  .clock[data-source='device'] {
+    color: var(--amber);
   }
 
   .live[hidden] {
@@ -1198,9 +1239,16 @@ const assistants = [
     gap: 0.75rem;
   }
 
+  /* Windows draws the open list in the select's own colors; left transparent, it came out light text on white. */
   .cidr select {
     padding-right: 0.5rem;
+    background-color: var(--bg-input);
     cursor: pointer;
+  }
+
+  .cidr option {
+    background-color: var(--bg-raised);
+    color: var(--text);
   }
 
   .cidr__results {

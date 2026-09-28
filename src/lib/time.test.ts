@@ -14,6 +14,8 @@ import {
 
 const CHI = 'America/Chicago';
 const NYC = 'America/New_York';
+const DEN = 'America/Denver';
+const LAX = 'America/Los_Angeles';
 const IND = 'Asia/Kolkata';
 const UTC = 'UTC';
 
@@ -40,6 +42,17 @@ describe('offsets', () => {
     expect(zoneAbbreviation(Date.UTC(2026, 0, 15, 12), CHI)).toBe('CST');
     expect(zoneAbbreviation(NOW, NYC)).toBe('EDT');
     expect(zoneAbbreviation(NOW, IND, 'IST')).toBe('IST');
+  });
+
+  it('switches Mountain and Pacific between daylight and standard time too', () => {
+    const JAN = Date.UTC(2026, 0, 15, 12);
+    expect([zoneAbbreviation(NOW, DEN), offsetMinutes(NOW, DEN)]).toEqual(['MDT', -360]);
+    expect([zoneAbbreviation(JAN, DEN), offsetMinutes(JAN, DEN)]).toEqual(['MST', -420]);
+    expect([zoneAbbreviation(NOW, LAX), offsetMinutes(NOW, LAX)]).toEqual(['PDT', -420]);
+    expect([zoneAbbreviation(JAN, LAX), offsetMinutes(JAN, LAX)]).toEqual(['PST', -480]);
+    // Daylight time ends at 2 AM local on Nov 1, 2026: 1:59 AM MDT, then 1:00 AM MST.
+    expect(zoneAbbreviation(Date.UTC(2026, 10, 1, 7, 59), DEN)).toBe('MDT');
+    expect(zoneAbbreviation(Date.UTC(2026, 10, 1, 8, 0), DEN)).toBe('MST');
   });
 });
 
