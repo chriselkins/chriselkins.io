@@ -79,8 +79,8 @@ const cidrRows = [
   { key: 'count', label: 'Addresses' },
 ] as const;
 
-// Prompt boxes start a new chat in a new tab. Gemini has no prompt parameter of its own; the
-// new tab extension fills its box from ?prompt=.
+// Prompt boxes start a new chat. Gemini has no prompt parameter of its own; the new tab extension
+// fills its box from ?prompt=.
 const assistants = [
   { id: 'chatgpt', label: 'ChatGPT', url: 'https://chatgpt.com/?prompt=' },
   { id: 'gemini', label: 'Gemini', url: 'https://gemini.google.com/app?prompt=' },
@@ -108,7 +108,7 @@ const toolLinks = [
     <div class="topbar">
       {
         toolLinks.map((l) => (
-          <a class="button button--small" href={l.href} target="_blank" rel="noopener noreferrer">
+          <a class="button button--small" href={l.href} rel="noreferrer">
             {l.label}
           </a>
         ))
@@ -198,7 +198,7 @@ const toolLinks = [
               enterkeyhint="send"
               required
             />
-            <button class="search__go" type="submit" aria-label={`Ask ${a.label} in a new tab`}>
+            <button class="search__go" type="submit" aria-label={`Ask ${a.label}`}>
               <span aria-hidden="true">↗</span>
             </button>
           </form>
@@ -207,17 +207,24 @@ const toolLinks = [
     </section>
 
     <section class="search" aria-label="Web search">
-      <form class="search__form" action="https://www.google.com/search" method="get" target="_blank" rel="noopener noreferrer" role="search">
+      <form class="search__form" action="https://www.google.com/search" method="get" rel="noreferrer" role="search">
         <label class="search__engine" for="q-google">Google</label>
         <input class="search__input" id="q-google" name="q" type="search" placeholder="Search" enterkeyhint="search" required autofocus />
-        <button class="search__go" type="submit" aria-label="Search Google in a new tab">
+        <button class="search__go" type="submit" aria-label="Search Google">
           <span aria-hidden="true">↗</span>
         </button>
       </form>
-      <form class="search__form" action="https://duckduckgo.com/" method="get" target="_blank" rel="noopener noreferrer" role="search">
+      <form class="search__form" role="search">
+        <label class="search__engine" for="q-youtube">YouTube</label>
+        <input class="search__input" id="q-youtube" name="search_query" type="search" placeholder="Search" enterkeyhint="search" required />
+        <button class="search__go" type="submit" aria-label="Search YouTube">
+          <span aria-hidden="true">↗</span>
+        </button>
+      </form>
+      <form class="search__form" action="https://duckduckgo.com/" method="get" rel="noreferrer" role="search">
         <label class="search__engine" for="q-ddg">DuckDuckGo</label>
         <input class="search__input" id="q-ddg" name="q" type="search" placeholder="Search" enterkeyhint="search" required />
-        <button class="search__go" type="submit" aria-label="Search DuckDuckGo in a new tab">
+        <button class="search__go" type="submit" aria-label="Search DuckDuckGo">
           <span aria-hidden="true">↗</span>
         </button>
       </form>
@@ -461,8 +468,8 @@ const toolLinks = [
   import { TIME_SOURCE, describeOffset, measureClockOffset } from '../lib/clock';
 
   const $ =<T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-  const openInNewTab = (href: string) =>
-    Object.assign(document.createElement('a'), { href, target: '_blank', rel: 'noopener noreferrer' }).click();
+  // This is my new tab page, so everything opens right here rather than in another tab.
+  const openHere = (href: string) => Object.assign(document.createElement('a'), { href, rel: 'noreferrer' }).click();
 
   /* ---------- Conversions ---------- */
 
@@ -745,13 +752,21 @@ const toolLinks = [
 
   /* ---------- Search ---------- */
 
-  // A URL or domain in the Google box opens that site in a new tab instead of searching for it.
+  // A URL or domain in the Google box opens that site instead of searching for it.
   const googleInput = $<HTMLInputElement>('q-google');
   googleInput.form!.addEventListener('submit', (e) => {
     const url = urlFromQuery(googleInput.value);
     if (!url) return;
     e.preventDefault();
-    openInNewTab(url);
+    openHere(url);
+  });
+
+  // YouTube opens as a link rather than a form submission, like the prompt boxes, so the CSP's
+  // form-action can stay narrow.
+  const youtubeInput = $<HTMLInputElement>('q-youtube');
+  youtubeInput.form!.addEventListener('submit', (e) => {
+    e.preventDefault();
+    openHere('https://www.youtube.com/results?search_query=' + encodeURIComponent(youtubeInput.value.trim()));
   });
 
   /* ---------- Assistants ---------- */
@@ -768,7 +783,7 @@ const toolLinks = [
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = prompt.value.trim();
-      if (text) openInNewTab(form.dataset.promptUrl + encodeURIComponent(text));
+      if (text) openHere(form.dataset.promptUrl + encodeURIComponent(text));
     });
   }
 </script>
@@ -1310,7 +1325,7 @@ const toolLinks = [
   /* Search */
   .search {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
   }
 
@@ -1515,7 +1530,8 @@ const toolLinks = [
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .ask {
+    .ask,
+    .search {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
