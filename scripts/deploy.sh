@@ -18,6 +18,8 @@ output() {
 BUCKET="$(output BucketName)"
 DISTRIBUTION="$(output DistributionId)"
 
+# A failing test stops the deploy before anything is uploaded.
+npm --prefix "$ROOT" test
 npm --prefix "$ROOT" run build
 
 # Every file needs a content type below; refuse to publish anything unexpected.
