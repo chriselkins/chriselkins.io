@@ -577,7 +577,15 @@ const toolLinks = [
     toMicrometers,
     type Unit,
   } from '../lib/length';
-  import { parseSuggestions, urlFromQuery } from '../lib/search';
+  import {
+    addToHistory,
+    mergeSuggestions,
+    parseHistory,
+    parseSuggestions,
+    removeFromHistory,
+    urlFromQuery,
+    type Suggestion,
+  } from '../lib/search';
   import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
   import { describeSubnet, formatIPv4, parseCidr } from '../lib/cidr';
   import { TIME_SOURCE, describeOffset, measureClockOffset } from '../lib/clock';
@@ -906,8 +914,12 @@ const toolLinks = [
 
   // Each search box suggests searches as I type, like the engine's own. Google and DuckDuckGo don't let
   // other sites read their suggestions, so they come through /tools/suggest/ on this domain (see
-  // SuggestFunction in infra/site.yaml), and the CSP's connect-src stays at 'self'.
+  // SuggestFunction in infra/site.yaml), and the CSP's connect-src stays at 'self'. Like the browser's
+  // address bar, each box also remembers what I search in it and suggests those first. That history
+  // stays in this browser's localStorage and is never sent anywhere.
   for (const input of document.querySelectorAll<HTMLInputElement>('[data-suggest]')) {
+    const engine = input.dataset.suggest!;
+    const historyKey = `search-history:${engine}`;
     const list = document.createElement('ul');
     list.className = 'suggest';
     list.id = `${input.id}-suggestions`;
@@ -923,7 +935,26 @@ const toolLinks = [
     // What I typed, which comes back when the highlight moves off the suggestions.
     let typed = '';
     let active = -1;
+    let shown: Suggestion[] = [];
     let request: AbortController | undefined;
+
+    // My past searches in this box, most recent first.
+    function readHistory() {
+      try {
+        return parseHistory(JSON.parse(localStorage.getItem(historyKey) ?? '[]'));
+      } catch {
+        // Storage is blocked: the box doesn't remember, and searching still works.
+        return [];
+      }
+    }
+
+    function writeHistory(history: string[]) {
+      try {
+        localStorage.setItem(historyKey, JSON.stringify(history));
+      } catch {
+        // Storage is blocked or full, as above.
+      }
+    }
 
     function highlight(index: number) {
       const options = [...list.children];
@@ -931,17 +962,28 @@ const toolLinks = [
       options.forEach((option, i) => option.setAttribute('aria-selected', String(i === index)));
       if (index < 0) input.removeAttribute('aria-activedescendant');
       else input.setAttribute('aria-activedescendant', options[index].id);
-      input.value = index < 0 ? typed : options[index].textContent!;
+      input.value = index < 0 ? typed : shown[index].text;
     }
 
-    function show(suggestions: string[]) {
+    function show(suggestions: Suggestion[]) {
+      shown = suggestions;
       list.replaceChildren(
-        ...suggestions.slice(0, 8).map((text, i) => {
+        ...suggestions.map(({ text, past }, i) => {
           const option = document.createElement('li');
           option.id = `${list.id}-${i}`;
           option.textContent = text;
           option.setAttribute('role', 'option');
           option.setAttribute('aria-selected', 'false');
+          if (past) {
+            // Shift+Delete removes a past search from the keyboard, and this × does it with the mouse.
+            const remove = document.createElement('span');
+            remove.className = 'suggest__remove';
+            remove.textContent = '×';
+            remove.title = 'Remove from history';
+            remove.setAttribute('aria-hidden', 'true');
+            option.className = 'suggest__past';
+            option.append(remove);
+          }
           return option;
         }),
       );
@@ -956,19 +998,28 @@ const toolLinks = [
       show([]);
     }
 
+    /** Takes a past search out of my history and out of the list. */
+    function forget(index: number) {
+      writeHistory(removeFromHistory(readHistory(), shown[index].text));
+      show(shown.filter((_, i) => i !== index));
+      input.value = typed;
+    }
+
     input.addEventListener('input', async () => {
       typed = input.value;
       request?.abort();
       if (!typed.trim()) return show([]);
       request = new AbortController();
+      const { signal } = request;
+      let fromEngine: string[] = [];
       try {
-        const response = await fetch(`/tools/suggest/${input.dataset.suggest}?q=${encodeURIComponent(typed)}`, {
-          signal: request.signal,
-        });
-        show(parseSuggestions(await response.json()));
+        const response = await fetch(`/tools/suggest/${engine}?q=${encodeURIComponent(typed)}`, { signal });
+        fromEngine = parseSuggestions(await response.json());
       } catch {
-        // Replaced by the next keystroke, or offline: no suggestions, and searching still works.
+        // Offline, or the engine didn't answer: my past searches still show, and searching still works.
       }
+      // Unless the next keystroke replaced this request, or the list closed while it waited.
+      if (!signal.aborted) show(mergeSuggestions(readHistory(), typed, fromEngine));
     });
 
     input.addEventListener('keydown', (e) => {
@@ -983,17 +1034,27 @@ const toolLinks = [
         e.preventDefault();
         highlight(-1);
         close();
+      } else if (e.key === 'Delete' && e.shiftKey && shown[active]?.past) {
+        // As in the browser's address bar, Shift+Delete removes the highlighted past search.
+        e.preventDefault();
+        forget(active);
       }
     });
 
     input.addEventListener('blur', close);
-    input.form!.addEventListener('submit', close);
+    input.form!.addEventListener('submit', () => {
+      writeHistory(addToHistory(readHistory(), input.value));
+      close();
+    });
     // Pressing on a suggestion would otherwise take focus from the box and close the list before the click.
     list.addEventListener('mousedown', (e) => e.preventDefault());
     list.addEventListener('click', (e) => {
-      const option = (e.target as Element).closest('li');
+      const target = e.target as Element;
+      const option = target.closest('li');
       if (!option) return;
-      input.value = option.textContent!;
+      const index = [...list.children].indexOf(option);
+      if (target.closest('.suggest__remove')) return forget(index);
+      input.value = shown[index].text;
       input.form!.requestSubmit();
     });
   }
@@ -1676,6 +1737,38 @@ const toolLinks = [
   .search :global(.suggest li:hover),
   .search :global(.suggest li[aria-selected='true']) {
     background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  /* My past searches stand out in teal, each with an × that removes it. */
+  .search :global(.suggest .suggest__past) {
+    position: relative;
+    padding-right: 2.75rem;
+    color: var(--teal);
+  }
+
+  .search :global(.suggest .suggest__past:hover),
+  .search :global(.suggest .suggest__past[aria-selected='true']) {
+    color: var(--teal-bright);
+  }
+
+  .search :global(.suggest__remove) {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    color: var(--text-3);
+    font-size: 1.125rem;
+    line-height: 1;
+    transform: translateY(-50%);
+  }
+
+  .search :global(.suggest__remove:hover) {
+    background: var(--line-strong);
     color: var(--text);
   }
 

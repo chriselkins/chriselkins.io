@@ -46,3 +46,48 @@ export function parseSuggestions(data: unknown): string[] {
   const suggestions = Array.isArray(data) ? data[1] : undefined;
   return Array.isArray(suggestions) ? suggestions.filter((s): s is string => typeof s === 'string') : [];
 }
+
+/** Each search box remembers my last 1,000 searches. */
+export const HISTORY_SIZE = 1000;
+
+/** A row in a search box's suggestions: one of my past searches, or one of the engine's. */
+export interface Suggestion {
+  text: string;
+  past: boolean;
+}
+
+/** A search history as saved, an array of searches with the most recent first. Anything else is empty. */
+export function parseHistory(data: unknown): string[] {
+  return Array.isArray(data) ? data.filter((s): s is string => typeof s === 'string') : [];
+}
+
+/** My history without a search, in any case. */
+export function removeFromHistory(history: string[], search: string): string[] {
+  const key = search.toLowerCase();
+  return history.filter((past) => past.toLowerCase() !== key);
+}
+
+/**
+ * My history with a search at the front. One I've made before moves up instead of showing twice, even
+ * in different case, and only the newest HISTORY_SIZE are kept.
+ */
+export function addToHistory(history: string[], query: string): string[] {
+  const search = query.trim();
+  if (!search) return history;
+  return [search, ...removeFromHistory(history, search)].slice(0, HISTORY_SIZE);
+}
+
+/**
+ * What a search box suggests for what I've typed, as the browser's address bar does: up to five of my
+ * past searches that start with it, most recent first, then the engine's suggestions that aren't among
+ * them, eight in all.
+ */
+export function mergeSuggestions(history: string[], typed: string, suggestions: string[]): Suggestion[] {
+  const prefix = typed.trimStart().toLowerCase();
+  const past = history.filter((search) => search.toLowerCase().startsWith(prefix)).slice(0, 5);
+  const shown = new Set(past.map((search) => search.toLowerCase()));
+  return [
+    ...past.map((text) => ({ text, past: true })),
+    ...suggestions.filter((text) => !shown.has(text.toLowerCase())).map((text) => ({ text, past: false })),
+  ].slice(0, 8);
+}

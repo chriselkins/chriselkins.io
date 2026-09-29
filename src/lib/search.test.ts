@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { parseSuggestions, urlFromQuery } from './search';
+import {
+  HISTORY_SIZE,
+  addToHistory,
+  mergeSuggestions,
+  parseHistory,
+  parseSuggestions,
+  removeFromHistory,
+  urlFromQuery,
+} from './search';
 
 describe('urlFromQuery', () => {
   it('opens full http and https URLs as typed', () => {
@@ -74,5 +82,92 @@ describe('parseSuggestions', () => {
     for (const data of [[], ['weather'], ['weather', 'radar'], {}, null, 'weather', [null, [1, null, {}]]]) {
       expect(parseSuggestions(data), JSON.stringify(data)).toEqual([]);
     }
+  });
+});
+
+describe('parseHistory', () => {
+  it('reads a saved history', () => {
+    expect(parseHistory(['weather radar', 'github.com/chriselkins'])).toEqual(['weather radar', 'github.com/chriselkins']);
+    expect(parseHistory(['weather', 1, null, 'news'])).toEqual(['weather', 'news']);
+  });
+
+  it('finds none in anything else', () => {
+    for (const data of [null, {}, 'weather', 42, [1, null, {}]]) {
+      expect(parseHistory(data), JSON.stringify(data)).toEqual([]);
+    }
+  });
+});
+
+describe('addToHistory', () => {
+  it('puts a search at the front, trimmed', () => {
+    expect(addToHistory(['weather'], '  node.js streams ')).toEqual(['node.js streams', 'weather']);
+    expect(addToHistory([], 'github.com/chriselkins')).toEqual(['github.com/chriselkins']);
+  });
+
+  it('moves a search I made before to the front, as I typed it this time', () => {
+    expect(addToHistory(['weather', 'Café du Monde', 'news'], 'café du monde')).toEqual(['café du monde', 'weather', 'news']);
+  });
+
+  it('ignores blank searches', () => {
+    const history = ['weather'];
+    expect(addToHistory(history, '   ')).toBe(history);
+  });
+
+  it(`keeps the newest ${HISTORY_SIZE}`, () => {
+    const full = Array.from({ length: HISTORY_SIZE }, (_, i) => `search ${i}`);
+    const next = addToHistory(full, 'newest');
+    expect(next).toHaveLength(HISTORY_SIZE);
+    expect(next[0]).toBe('newest');
+    expect(next.at(-1)).toBe(`search ${HISTORY_SIZE - 2}`);
+  });
+});
+
+describe('removeFromHistory', () => {
+  it('removes a search in any case and keeps the rest in order', () => {
+    expect(removeFromHistory(['weather', 'News', 'maps'], 'news')).toEqual(['weather', 'maps']);
+    expect(removeFromHistory(['weather'], 'maps')).toEqual(['weather']);
+  });
+});
+
+describe('mergeSuggestions', () => {
+  const history = ['weather radar', 'news', 'Weather Tomorrow', 'wells fargo', 'weather'];
+
+  it('puts my past searches that start with what I typed first, most recent first', () => {
+    expect(mergeSuggestions(history, 'wea', ['weather', 'weather channel', 'WEATHER RADAR'])).toEqual([
+      { text: 'weather radar', past: true },
+      { text: 'Weather Tomorrow', past: true },
+      { text: 'weather', past: true },
+      { text: 'weather channel', past: false },
+    ]);
+  });
+
+  it('ignores case and leading spaces in what I typed', () => {
+    expect(mergeSuggestions(history, '  WEATHER T', [])).toEqual([{ text: 'Weather Tomorrow', past: true }]);
+  });
+
+  it('only matches the start of a past search', () => {
+    expect(mergeSuggestions(history, 'radar', ['radar map'])).toEqual([{ text: 'radar map', past: false }]);
+    expect(mergeSuggestions(history, 'weather ', [])).toEqual([
+      { text: 'weather radar', past: true },
+      { text: 'Weather Tomorrow', past: true },
+    ]);
+  });
+
+  it('shows at most five past searches and eight suggestions in all', () => {
+    const past = Array.from({ length: 7 }, (_, i) => `weather ${i}`);
+    const engine = Array.from({ length: 10 }, (_, i) => `weather news ${i}`);
+    expect(mergeSuggestions(past, 'weather', engine)).toEqual([
+      ...past.slice(0, 5).map((text) => ({ text, past: true })),
+      ...engine.slice(0, 3).map((text) => ({ text, past: false })),
+    ]);
+  });
+
+  it("shows only my past searches when the engine has none, and only the engine's when none of mine match", () => {
+    expect(mergeSuggestions(history, 'ne', [])).toEqual([{ text: 'news', past: true }]);
+    expect(mergeSuggestions(history, 'maps', ['maps', 'maps directions'])).toEqual([
+      { text: 'maps', past: false },
+      { text: 'maps directions', past: false },
+    ]);
+    expect(mergeSuggestions([], 'maps', [])).toEqual([]);
   });
 });
