@@ -5,6 +5,7 @@ import Base from '../layouts/Base.astro';
 import { IMPERIAL, METRIC, SLIDER_MAX_LOG, SLIDER_MIN_LOG, SLIDER_STEPS, UNITS, convert, formatNumber, metersToSlider } from '../lib/length';
 import { COLDEST_C, HOTTEST_C, formatTemperature, toCelsius, toFahrenheit } from '../lib/temperature';
 import { describeSubnet, formatIPv4, maskFromBits, parseIPv4 } from '../lib/cidr';
+import { HISTORY_SIZE } from '../lib/search';
 
 const zones = [
   { id: 'eastern', label: 'Eastern', tz: 'America/New_York' },
@@ -339,15 +340,26 @@ const toolLinks = [
       </form>
     </section>
 
-    <p class="extension">
-      <a class="extension__link" href="/downloads/chris-new-tab.zip" download>
-        Chrome new tab extension <span aria-hidden="true">↓</span>
-      </a>
-      <span>
-        Unzip it, open <code>chrome://extensions</code>, turn on Developer mode, choose Load unpacked, and select the
-        <code>chris-new-tab</code> folder.
-      </span>
-    </p>
+    <div class="bottombar">
+      <p class="extension">
+        <a class="extension__link" href="/downloads/chris-new-tab.zip" download>
+          Chrome new tab extension <span aria-hidden="true">↓</span>
+        </a>
+        <span>
+          Unzip it, open <code>chrome://extensions</code>, turn on Developer mode, choose Load unpacked, and select the
+          <code>chris-new-tab</code> folder.
+        </span>
+      </p>
+      <button class="gear" type="button" id="settings-open" aria-haspopup="dialog" aria-label="Settings" title="Settings">
+        {/* Feather's settings icon (MIT). */}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+          />
+        </svg>
+      </button>
+    </div>
 
     {hasSafari && (
       <p class="extension">
@@ -360,6 +372,29 @@ const toolLinks = [
         </span>
       </p>
     )}
+
+    <dialog class="dialog dialog--narrow" id="settings" aria-labelledby="settings-title">
+      <div class="dialog__body">
+        <div class="dialog__head">
+          <h2 class="dialog__title" id="settings-title">Settings</h2>
+          <button class="button button--small" type="button" id="settings-close">Close</button>
+        </div>
+
+        <section class="panel" aria-labelledby="history-title">
+          <div class="panel__head">
+            <h3 class="panel__title" id="history-title">Search history</h3>
+          </div>
+          <p class="settings__text">
+            The Google, YouTube, and DuckDuckGo boxes each remember their last {HISTORY_SIZE.toLocaleString('en-US')} searches
+            and suggest them first. They stay in this browser and are never sent anywhere.
+          </p>
+          <div class="settings__row">
+            <button class="button button--small" type="button" id="history-clear">Clear history</button>
+            <span class="settings__status" id="history-status" aria-live="polite"></span>
+          </div>
+        </section>
+      </div>
+    </dialog>
 
     <dialog class="dialog" id="conversions" aria-labelledby="conversions-title">
       <div class="dialog__body">
@@ -596,8 +631,8 @@ const toolLinks = [
 
   /* ---------- Dialogs ---------- */
 
-  // Conversions, and All zones on the time zone card.
-  for (const id of ['conversions', 'zones']) {
+  // Conversions, All zones on the time zone card, and the Settings gear at the bottom.
+  for (const id of ['conversions', 'zones', 'settings']) {
     const dialog = $<HTMLDialogElement>(id);
     $(`${id}-open`).addEventListener('click', () => dialog.showModal());
     $(`${id}-close`).addEventListener('click', () => dialog.close());
@@ -912,6 +947,26 @@ const toolLinks = [
     openHere('https://www.youtube.com/results?search_query=' + encodeURIComponent(youtubeInput.value.trim()));
   });
 
+  // Each box's search history is in localStorage under search-history:<engine>, most recent first.
+  const HISTORY_PREFIX = 'search-history:';
+
+  function readHistory(key: string) {
+    try {
+      return parseHistory(JSON.parse(localStorage.getItem(key) ?? '[]'));
+    } catch {
+      // Storage is blocked: the boxes don't remember, and searching still works.
+      return [];
+    }
+  }
+
+  function writeHistory(key: string, history: string[]) {
+    try {
+      localStorage.setItem(key, JSON.stringify(history));
+    } catch {
+      // Storage is blocked or full, as above.
+    }
+  }
+
   // Each search box suggests searches as I type, like the engine's own. Google and DuckDuckGo don't let
   // other sites read their suggestions, so they come through /tools/suggest/ on this domain (see
   // SuggestFunction in infra/site.yaml), and the CSP's connect-src stays at 'self'. Like the browser's
@@ -919,7 +974,7 @@ const toolLinks = [
   // stays in this browser's localStorage and is never sent anywhere.
   for (const input of document.querySelectorAll<HTMLInputElement>('[data-suggest]')) {
     const engine = input.dataset.suggest!;
-    const historyKey = `search-history:${engine}`;
+    const historyKey = HISTORY_PREFIX + engine;
     const list = document.createElement('ul');
     list.className = 'suggest';
     list.id = `${input.id}-suggestions`;
@@ -937,24 +992,6 @@ const toolLinks = [
     let active = -1;
     let shown: Suggestion[] = [];
     let request: AbortController | undefined;
-
-    // My past searches in this box, most recent first.
-    function readHistory() {
-      try {
-        return parseHistory(JSON.parse(localStorage.getItem(historyKey) ?? '[]'));
-      } catch {
-        // Storage is blocked: the box doesn't remember, and searching still works.
-        return [];
-      }
-    }
-
-    function writeHistory(history: string[]) {
-      try {
-        localStorage.setItem(historyKey, JSON.stringify(history));
-      } catch {
-        // Storage is blocked or full, as above.
-      }
-    }
 
     function highlight(index: number) {
       const options = [...list.children];
@@ -1000,7 +1037,7 @@ const toolLinks = [
 
     /** Takes a past search out of my history and out of the list. */
     function forget(index: number) {
-      writeHistory(removeFromHistory(readHistory(), shown[index].text));
+      writeHistory(historyKey, removeFromHistory(readHistory(historyKey), shown[index].text));
       show(shown.filter((_, i) => i !== index));
       input.value = typed;
     }
@@ -1019,7 +1056,7 @@ const toolLinks = [
         // Offline, or the engine didn't answer: my past searches still show, and searching still works.
       }
       // Unless the next keystroke replaced this request, or the list closed while it waited.
-      if (!signal.aborted) show(mergeSuggestions(readHistory(), typed, fromEngine));
+      if (!signal.aborted) show(mergeSuggestions(readHistory(historyKey), typed, fromEngine));
     });
 
     input.addEventListener('keydown', (e) => {
@@ -1043,7 +1080,7 @@ const toolLinks = [
 
     input.addEventListener('blur', close);
     input.form!.addEventListener('submit', () => {
-      writeHistory(addToHistory(readHistory(), input.value));
+      writeHistory(historyKey, addToHistory(readHistory(historyKey), input.value));
       close();
     });
     // Pressing on a suggestion would otherwise take focus from the box and close the list before the click.
@@ -1058,6 +1095,32 @@ const toolLinks = [
       input.form!.requestSubmit();
     });
   }
+
+  /* ---------- Settings ---------- */
+
+  // How many searches the boxes remember, counted each time Settings opens, and Clear history to empty
+  // them all, including any left by a box that's gone.
+  const historyStatus = $('history-status');
+
+  function historyKeys() {
+    try {
+      return Object.keys(localStorage).filter((key) => key.startsWith(HISTORY_PREFIX));
+    } catch {
+      // Storage is blocked, so nothing was saved.
+      return [];
+    }
+  }
+
+  function renderHistoryStatus() {
+    const count = historyKeys().reduce((total, key) => total + readHistory(key).length, 0);
+    historyStatus.textContent = count ? `${count.toLocaleString()} ${count === 1 ? 'search' : 'searches'} saved` : 'No searches saved';
+  }
+
+  $('settings-open').addEventListener('click', renderHistoryStatus);
+  $('history-clear').addEventListener('click', () => {
+    for (const key of historyKeys()) localStorage.removeItem(key);
+    renderHistoryStatus();
+  });
 
   /* ---------- Assistants ---------- */
 
@@ -1628,6 +1691,29 @@ const toolLinks = [
     margin-bottom: 0;
   }
 
+  /* Settings */
+  .dialog--narrow {
+    width: min(34rem, calc(100vw - 2rem));
+  }
+
+  .settings__text {
+    color: var(--text-2);
+    font-size: 0.875rem;
+  }
+
+  .settings__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-top: 1rem;
+  }
+
+  .settings__status {
+    color: var(--text-3);
+    font-size: 0.8125rem;
+  }
+
   /* Search */
   .search {
     display: grid;
@@ -1852,6 +1938,39 @@ const toolLinks = [
     font-family: var(--mono);
     font-size: 0.75rem;
     white-space: nowrap;
+  }
+
+  /* The Chrome extension line, with the Settings gear at its end. */
+  .bottombar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .gear {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--bg-input);
+    color: var(--text-3);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .gear:hover {
+    border-color: var(--teal);
+    color: var(--teal-bright);
+  }
+
+  .gear svg {
+    width: 1rem;
+    height: 1rem;
   }
 
   /* Narrower screens */
